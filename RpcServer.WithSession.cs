@@ -44,7 +44,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DeleteSession(JArray _params)
+        protected virtual JObject DeleteSnapshots(JArray _params)
         {
             int count = _params.Count;
             JObject json = new();
@@ -56,7 +56,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListSession()
+        protected virtual JObject ListSnapshots()
         {
             JArray session = new JArray();
             foreach (JString s in sessionToEngine.Keys.Select(s => (JString)s))
@@ -64,6 +64,34 @@ namespace Neo.Plugins
                 session.Add(s);
             }
             return session;
+        }
+
+        [RpcMethod]
+        protected virtual JObject RenameSnapshot(JArray _params)
+        {
+            string from = _params[0].AsString();
+            string to = _params[1].AsString();
+            sessionToEngine[to] = sessionToEngine[from];
+            sessionToEngine.Remove(from);
+            JObject json = new();
+            json["success"] = true;
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JObject CopySnapshot(JArray _params)
+        {
+            string from = _params[0].AsString();
+            string to = _params[1].AsString();
+            sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
+            JObject json = new();
+            json["success"] = true;
+            return json;
+        }
+
+        private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine)
+        {
+            return ApplicationEngine.Run(new byte[] { 0x40 }, engine.Snapshot, settings: system.Settings, gas: settings.MaxGasInvoke);
         }
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
