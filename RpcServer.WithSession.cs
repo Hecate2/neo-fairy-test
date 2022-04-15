@@ -44,6 +44,24 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
+        {
+            JArray jarray = new();
+            foreach (var param in _params)
+            {
+                string session = param.AsString();
+                ApplicationEngine engine;
+                if (sessionToEngine.TryGetValue(session, out engine))
+                {
+                    continue;
+                }
+                sessionToEngine[session] = ApplicationEngine.Run(new byte[] { 0x40 }, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                jarray.Add(session);
+            }
+            return jarray;
+        }
+
+        [RpcMethod]
         protected virtual JObject DeleteSnapshots(JArray _params)
         {
             int count = _params.Count;
