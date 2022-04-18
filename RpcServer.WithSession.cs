@@ -1,4 +1,4 @@
-﻿// include this file in neo-modules/src/RpcServer/RpcServer.csproj
+// include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
 using Neo.IO.Json;
@@ -66,9 +66,10 @@ namespace Neo.Plugins
         {
             int count = _params.Count;
             JObject json = new();
-            for (int i = 0; i<count; i++)
+            foreach (var s in _params)
             {
-                json[i] = sessionToEngine.Remove(_params[i].AsString());
+                string str = s.AsString();
+                json[str] = sessionToEngine.Remove(str);
             }
             return json;
         }
@@ -92,7 +93,7 @@ namespace Neo.Plugins
             sessionToEngine[to] = sessionToEngine[from];
             sessionToEngine.Remove(from);
             JObject json = new();
-            json["success"] = true;
+            json[to] = from;
             return json;
         }
 
@@ -103,7 +104,7 @@ namespace Neo.Plugins
             string to = _params[1].AsString();
             sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
             JObject json = new();
-            json["success"] = true;
+            json[to] = from;
             return json;
         }
 
