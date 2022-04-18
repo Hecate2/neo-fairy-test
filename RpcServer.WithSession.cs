@@ -124,7 +124,6 @@ namespace Neo.Plugins
                 ? ApplicationEngine.Run(script, engine.Snapshot, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke)
                 : ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             if (writeSnapshot)
-                engine.CurrentContext.EvaluationStack.Clear();
                 sessionToEngine[session] = engine;
             JObject json = new();
             json["script"] = Convert.ToBase64String(script);
