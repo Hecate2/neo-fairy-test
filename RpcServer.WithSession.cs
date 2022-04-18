@@ -18,7 +18,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject InvokeFunctionWithSession(JArray _params)
         {
-            string session = _params[0].ToString();
+            string session = _params[0].AsString();
             bool writeSnapshot = _params[1].AsBoolean();
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
@@ -36,7 +36,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject InvokeScriptWithSession(JArray _params)
         {
-            string session = _params[0].ToString();
+            string session = _params[0].AsString();
             bool writeSnapshot = _params[1].AsBoolean();
             byte[] script = Convert.FromBase64String(_params[2].AsString());
             Signers signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
@@ -46,19 +46,17 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
         {
-            JArray jarray = new();
+            JObject json = new();
             foreach(var param in _params)
             {
                 string session = param.AsString();
-                ApplicationEngine engine;
-                if (sessionToEngine.TryGetValue(session, out engine))
-                {
-                    continue;
-                }
+                if (sessionToEngine.TryGetValue(session, out _))
+                    json[session] = true;
+                else
+                    json[session] = false;
                 sessionToEngine[session] = ApplicationEngine.Run(new byte[] {0x40}, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
-                jarray.Add(session);
             }
-            return jarray;
+            return json;
         }
 
         [RpcMethod]
@@ -126,6 +124,7 @@ namespace Neo.Plugins
                 ? ApplicationEngine.Run(script, engine.Snapshot, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke)
                 : ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             if (writeSnapshot)
+                engine.CurrentContext.EvaluationStack.Clear();
                 sessionToEngine[session] = engine;
             JObject json = new();
             json["script"] = Convert.ToBase64String(script);
