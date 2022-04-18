@@ -47,7 +47,7 @@ namespace Neo.Plugins
         protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
         {
             JArray jarray = new();
-            foreach (var param in _params)
+            foreach(var param in _params)
             {
                 string session = param.AsString();
                 ApplicationEngine engine;
@@ -55,7 +55,7 @@ namespace Neo.Plugins
                 {
                     continue;
                 }
-                sessionToEngine[session] = ApplicationEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = ApplicationEngine.Run(new byte[] {0x40}, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
                 jarray.Add(session);
             }
             return jarray;
@@ -74,10 +74,10 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListSnapshots()
+        protected virtual JObject ListSnapshots(JArray _params)
         {
             JArray session = new JArray();
-            foreach (JString s in sessionToEngine.Keys.Select(s => (JString)s))
+            foreach (string s in sessionToEngine.Keys)
             {
                 session.Add(s);
             }
