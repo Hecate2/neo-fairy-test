@@ -55,7 +55,7 @@ namespace Neo.Plugins
                 {
                     continue;
                 }
-                sessionToEngine[session] = ApplicationEngine.Run(new byte[] { 0x40 }, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = ApplicationEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
                 jarray.Add(session);
             }
             return jarray;
