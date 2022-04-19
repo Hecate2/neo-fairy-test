@@ -3,7 +3,9 @@
 
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 using System.Collections.Generic;
@@ -105,6 +107,46 @@ namespace Neo.Plugins
             json[to] = from;
             return json;
         }
+
+        [RpcMethod]
+        protected virtual JObject SetSnapshotTimestamp(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ulong timestamp = ulong.Parse(_params[1].AsString());
+            ApplicationEngine engine = sessionToEngine[session];
+            engine = ApplicationEngine.Create(TriggerType.Application, null, engine.Snapshot, CreateDummyBlockWithTimestamp(engine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
+            engine.LoadScript(new byte[] { 0x40 });
+            engine.Execute();
+            sessionToEngine[session] = engine;
+            JObject json = new();
+            json[session] = timestamp;
+            return json;
+        }
+
+        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp=0)
+        {
+            UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
+            Block currentBlock = NativeContract.Ledger.GetBlock(snapshot, hash);
+            return new Block
+            {
+                Header = new Header
+                {
+                    Version = 0,
+                    PrevHash = hash,
+                    MerkleRoot = new UInt256(),
+                    Timestamp = timestamp == 0 ? currentBlock.Timestamp + settings.MillisecondsPerBlock : timestamp,
+                    Index = currentBlock.Index + 1,
+                    NextConsensus = currentBlock.NextConsensus,
+                    Witness = new Witness
+                    {
+                        InvocationScript = Array.Empty<byte>(),
+                        VerificationScript = Array.Empty<byte>()
+                    },
+                },
+                Transactions = Array.Empty<Transaction>()
+            };
+        }
+
 
         private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine)
         {
