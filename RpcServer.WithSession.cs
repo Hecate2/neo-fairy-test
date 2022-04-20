@@ -15,7 +15,8 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        Dictionary<string, ApplicationEngine> sessionToEngine = new Dictionary<string, ApplicationEngine>();
+        Dictionary<string, ApplicationEngine> sessionToEngine = new();
+        Dictionary<string, ulong> sessionToTimestamp = new();
 
         [RpcMethod]
         protected virtual JObject InvokeFunctionWithSession(JArray _params)
@@ -57,6 +58,7 @@ namespace Neo.Plugins
                 else
                     json[session] = false;
                 sessionToEngine[session] = ApplicationEngine.Run(new byte[] {0x40}, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToTimestamp[session] = 0;
             }
             return json;
         }
@@ -69,7 +71,7 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string str = s.AsString();
-                json[str] = sessionToEngine.Remove(str);
+                json[str] = sessionToEngine.Remove(str) ? sessionToTimestamp.Remove(str) : false;
             }
             return json;
         }
@@ -92,6 +94,8 @@ namespace Neo.Plugins
             string to = _params[1].AsString();
             sessionToEngine[to] = sessionToEngine[from];
             sessionToEngine.Remove(from);
+            sessionToTimestamp[to] = sessionToTimestamp[from];
+            sessionToTimestamp.Remove(from);
             JObject json = new();
             json[to] = from;
             return json;
@@ -103,6 +107,7 @@ namespace Neo.Plugins
             string from = _params[0].AsString();
             string to = _params[1].AsString();
             sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
+            sessionToTimestamp[to] = sessionToTimestamp[from];
             JObject json = new();
             json[to] = from;
             return json;
@@ -113,13 +118,21 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             ulong timestamp = ulong.Parse(_params[1].AsString());
-            ApplicationEngine engine = sessionToEngine[session];
-            engine = ApplicationEngine.Create(TriggerType.Application, null, engine.Snapshot, CreateDummyBlockWithTimestamp(engine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
-            engine.LoadScript(new byte[] { 0x40 });
-            engine.Execute();
-            sessionToEngine[session] = engine;
+            sessionToTimestamp[session] = timestamp;
             JObject json = new();
             json[session] = timestamp;
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetSnapshotTimeStamp(JArray _params)
+        {
+            JObject json = new();
+            foreach (var s in _params)
+            {
+                string session = s.AsString();
+                json[session] = sessionToTimestamp.GetValueOrDefault(session, (ulong)0);
+            }
             return json;
         }
 
@@ -161,26 +174,39 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = signers.Witnesses,
             };
-            ApplicationEngine engine;
-            engine = sessionToEngine.TryGetValue(session, out engine)
-                ? ApplicationEngine.Run(script, engine.Snapshot, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke)
-                : ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
-            if (writeSnapshot)
-                sessionToEngine[session] = engine;
+            ulong timestamp;
+            if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
+                sessionToTimestamp[session] = 0;
+            ApplicationEngine oldEngine, newEngine;
+            if (timestamp == 0)
+            {
+                newEngine = sessionToEngine.TryGetValue(session, out oldEngine)
+                    ? ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke)
+                    : ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+            }
+            else
+            {
+                oldEngine = sessionToEngine[session];
+                newEngine = ApplicationEngine.Create(TriggerType.Application, null, oldEngine.Snapshot.CreateSnapshot(), CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
+                newEngine.LoadScript(script);
+                newEngine.Execute();
+            }
+            if (writeSnapshot && newEngine.State == VMState.HALT)
+                sessionToEngine[session] = newEngine;
             JObject json = new();
             json["script"] = Convert.ToBase64String(script);
-            json["state"] = engine.State;
-            json["gasconsumed"] = engine.GasConsumed.ToString();
-            json["exception"] = GetExceptionMessage(engine.FaultException);
+            json["state"] = newEngine.State;
+            json["gasconsumed"] = newEngine.GasConsumed.ToString();
+            json["exception"] = GetExceptionMessage(newEngine.FaultException);
             try
             {
-                json["stack"] = new JArray(engine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+                json["stack"] = new JArray(newEngine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
             }
             catch (InvalidOperationException)
             {
                 json["stack"] = "error: invalid operation";
             }
-            if (engine.State != VMState.FAULT)
+            if (newEngine.State != VMState.FAULT)
             {
                 ProcessInvokeWithWallet(json, signers);
             }
