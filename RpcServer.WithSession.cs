@@ -163,7 +163,7 @@ namespace Neo.Plugins
 
         private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine)
         {
-            return ApplicationEngine.Run(new byte[] { 0x40 }, engine.Snapshot, settings: system.Settings, gas: settings.MaxGasInvoke);
+            return ApplicationEngine.Run(new byte[] { 0x40 }, engine.Snapshot.CreateSnapshot(), settings: system.Settings, gas: settings.MaxGasInvoke);
         }
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
