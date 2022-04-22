@@ -187,7 +187,7 @@ namespace Neo.Plugins
             else
             {
                 oldEngine = sessionToEngine[session];
-                newEngine = ApplicationEngine.Create(TriggerType.Application, null, oldEngine.Snapshot.CreateSnapshot(), CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
+                newEngine = ApplicationEngine.Create(TriggerType.Application, container: tx, oldEngine.Snapshot.CreateSnapshot(), CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
                 newEngine.LoadScript(script);
                 newEngine.Execute();
             }
