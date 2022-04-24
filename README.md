@@ -6,3 +6,4 @@ You can execute transactions and save your snapshots in the memory of neo-cli. A
 
 Non official client: https://github.com/Hecate2/neo-test-client
 
+**MAKE SURE YOUR WALLET IS CLOSED BEFORE YOU INVOKE ANY RPC METHOD IN THESE CODES. OTHERWISE YOU WOULD NOT EVEN FIND THE GAS CONTRACT!**
