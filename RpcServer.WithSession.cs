@@ -180,15 +180,24 @@ namespace Neo.Plugins
             if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
                 sessionToTimestamp[session] = 0;
             ApplicationEngine oldEngine, newEngine;
+            DataCache validSnapshotBase;
             if (timestamp == 0)
             {
-                newEngine = sessionToEngine.TryGetValue(session, out oldEngine)
-                    ? ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke)
-                    : ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                if (sessionToEngine.TryGetValue(session, out oldEngine))
+                {
+                    newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                    validSnapshotBase = oldEngine.Snapshot;
+                }
+                else
+                {
+                    newEngine = ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                    validSnapshotBase = system.StoreView;
+                }
             }
             else
             {
                 oldEngine = sessionToEngine[session];
+                validSnapshotBase = oldEngine.Snapshot;
                 newEngine = ApplicationEngine.Create(TriggerType.Application, container: tx, oldEngine.Snapshot.CreateSnapshot(), CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), system.Settings, settings.MaxGasInvoke);
                 newEngine.LoadScript(script);
                 newEngine.Execute();
@@ -210,7 +219,7 @@ namespace Neo.Plugins
             }
             if (newEngine.State != VMState.FAULT)
             {
-                ProcessInvokeWithWalletAndSnapshot(newEngine.Snapshot.CreateSnapshot(), json, signers);
+                ProcessInvokeWithWalletAndSnapshot(validSnapshotBase, json, signers);
             }
             return json;
         }
@@ -226,14 +235,14 @@ namespace Neo.Plugins
             Transaction tx;
             try
             {
-                tx = wallet.MakeTransaction(snapshot, Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
+                tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
             }
             catch (Exception e)
             {
                 // result["exception"] = GetExceptionMessage(e);
                 return;
             }
-            ContractParametersContext context = new(snapshot, tx, settings.Network);
+            ContractParametersContext context = new(snapshot.CreateSnapshot(), tx, settings.Network);
             wallet.Sign(context);
             if (context.Completed)
             {
