@@ -4,8 +4,8 @@ Let https://github.com/neo-project/neo-modules/blob/master/src/RpcServer/RpcServ
 
 You can execute your own **fairy transactions**, with access to the environment of all other on-chain contracts, but without having to write your transactions onto the chain. The executions of your fairy transactions are saved in your snapshots in the memory of neo-cli. Access these snapshots with session strings defined by yourself. You can change the timestamp (the returned value of `Runtime.Time` called by smart contracts) at will. Happy testing on the mainnet!  
 
-No GAS fee is needed for your fairy transactions. This is a great help when your contract heavily manipulates GAS and you want to ensure correct GAS transferring. If you do need to compute the GAS system fee and network fee, just read the returned fairy transactions.  
+No GAS fee is needed for your fairy transactions. This is a great help when your contract heavily manipulates GAS and you want to ensure correct GAS transferring. If you do need to compute the GAS system fee and network fee, just read `["networkfee"]` and `["gasconsumed"]` in the result of invoked fairy transactions. Network fee is calculated only when the correct wallet is opened and the transaction can be validly signed by the opened wallet.  
 
 Non official client: https://github.com/Hecate2/neo-test-client
 
-**MAKE SURE YOUR WALLET IS CLOSED BEFORE YOU INVOKE ANY RPC METHOD IN THESE CODES. OTHERWISE YOU WOULD NOT EVEN FIND THE GAS CONTRACT!**
+

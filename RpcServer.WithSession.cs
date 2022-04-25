@@ -1,12 +1,14 @@
 // include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
+using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.Wallets.NEP6;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -208,9 +210,44 @@ namespace Neo.Plugins
             }
             if (newEngine.State != VMState.FAULT)
             {
-                ProcessInvokeWithWallet(json, signers);
+                ProcessInvokeWithWalletAndSnapshot(newEngine.Snapshot.CreateSnapshot(), json, signers);
             }
             return json;
         }
+
+        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signers signers = null)
+        {
+            if (wallet == null || signers == null) return;
+
+            Signer[] witnessSigners = signers.GetSigners().ToArray();
+            UInt160 sender = signers.Size > 0 ? signers.GetSigners()[0].Account : null;
+            if (witnessSigners.Length <= 0) return;
+
+            Transaction tx;
+            try
+            {
+                tx = wallet.MakeTransaction(snapshot, Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
+            }
+            catch (Exception e)
+            {
+                // result["exception"] = GetExceptionMessage(e);
+                return;
+            }
+            ContractParametersContext context = new(snapshot, tx, settings.Network);
+            wallet.Sign(context);
+            if (context.Completed)
+            {
+                tx.Witnesses = context.GetWitnesses();
+                byte[] txBytes = tx.ToArray();
+                result["tx"] = Convert.ToBase64String(txBytes);
+                long networkfee = (wallet ?? new DummyWallet(system.Settings)).CalculateNetworkFee(system.StoreView, txBytes.AsSerializable<Transaction>());
+                result["networkfee"] = networkfee.ToString();
+            }
+            else
+            {
+                result["pendingsignature"] = context.ToJson();
+            }
+        }
+
     }
 }
