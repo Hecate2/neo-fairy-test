@@ -182,6 +182,56 @@ namespace Neo.Plugins
             return json;
         }
 
+        [RpcMethod]
+        protected virtual JObject PutStorageWithSession(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 contract = UInt160.Parse(_params[1].AsString());
+            string keyBase64 = _params[2].AsString();
+            byte[] key = Convert.FromBase64String(keyBase64);
+            string valueBase64 = _params[3].AsString();
+            byte[] value;
+            if (valueBase64 == "")
+            {
+                value = new byte[0] { };
+            }
+            else
+            {
+                value = Convert.FromBase64String(valueBase64);
+            }
+
+            ApplicationEngine oldEngine = sessionToEngine[session];
+            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
+            if(value.Length == 0)
+            {
+                oldEngine.Snapshot.Delete(new StorageKey { Id=contractState.Id, Key=key });
+            }
+            else
+            {
+                oldEngine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(value));
+            }
+            oldEngine.Snapshot.Commit();
+            JObject json = new();
+            json[keyBase64] = valueBase64;
+            return new JObject();
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetStorageWithSession(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 contract = UInt160.Parse(_params[1].AsString());
+            string keyBase64 = _params[2].AsString();
+            byte[] key = Convert.FromBase64String(keyBase64);
+
+            ApplicationEngine oldEngine = sessionToEngine[session];
+            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
+            JObject json = new();
+            StorageItem item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
+            json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value);
+            return json;
+        }
+
         private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp=0)
         {
             UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
