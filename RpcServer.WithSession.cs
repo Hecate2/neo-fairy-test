@@ -1,15 +1,17 @@
 // include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
+using Neo;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.SmartContract.Manifest;
 using Neo.VM;
-using Neo.Wallets.NEP6;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -138,6 +140,48 @@ namespace Neo.Plugins
             return json;
         }
 
+        [RpcMethod]
+        protected virtual JObject VirtualDeploy(JArray _params)
+        {
+            if (wallet == null)
+                throw new Exception("Please open a wallet before deploying a contract.");
+            string session = _params[0].AsString();
+            NefFile nef;
+            using (var stream = new BinaryReader(new MemoryStream(Convert.FromBase64String(_params[1].AsString())), Neo.Utility.StrictUTF8, false))
+            {
+                nef = stream.ReadSerializable<NefFile>();
+            }
+            ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
+            ApplicationEngine oldEngine = sessionToEngine.GetValueOrDefault(session, BuildSnapshotWithDummyScript());
+            DataCache snapshot = oldEngine.Snapshot;
+            byte[] script;
+            using(ScriptBuilder sb = new ScriptBuilder())
+            {
+                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                script = sb.ToArray();
+            }
+            JObject json = new();
+            try
+            {
+                Transaction tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), script);
+                UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
+                sessionToEngine[session] = ApplicationEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToTimestamp.GetValueOrDefault(session, (ulong)0)), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                json[session] = hash.ToString();
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.InnerException.Message.StartsWith("Contract Already Exists: "))
+                {
+                    json[session] = ex.InnerException.Message[^42..];
+                }
+                else
+                {
+                    throw ex;
+                }
+            }
+            return json;
+        }
+
         private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp=0)
         {
             UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
@@ -163,9 +207,9 @@ namespace Neo.Plugins
         }
 
 
-        private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine)
+        private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine = null)
         {
-            return ApplicationEngine.Run(new byte[] { 0x40 }, engine.Snapshot.CreateSnapshot(), settings: system.Settings, gas: settings.MaxGasInvoke);
+            return ApplicationEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
         }
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
