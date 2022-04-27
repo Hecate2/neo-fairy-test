@@ -1,7 +1,6 @@
 // include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
-using Neo;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
@@ -12,6 +11,7 @@ using Neo.SmartContract.Manifest;
 using Neo.VM;
 using System;
 using System.IO;
+using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -21,6 +21,11 @@ namespace Neo.Plugins
     {
         Dictionary<string, ApplicationEngine> sessionToEngine = new();
         Dictionary<string, ulong> sessionToTimestamp = new();
+
+        public UInt160 neoScriptHash = UInt160.Parse("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5");
+        public UInt160 gasScriptHash = UInt160.Parse("0xd2a4cff31913016155e38e474a2c06d08be276cf");
+        const byte Native_Prefix_Account = 20;
+        const byte Native_Prefix_TotalSupply = 11;
 
         [RpcMethod]
         protected virtual JObject InvokeFunctionWithSession(JArray _params)
@@ -230,6 +235,73 @@ namespace Neo.Plugins
             StorageItem item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
             json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value);
             return json;
+        }
+
+        [RpcMethod]
+        protected virtual JObject SetNeoBalance(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 account = UInt160.Parse(_params[1].AsString());
+            ulong balance = ulong.Parse(_params[2].AsString());
+            return SetTokenBalance(session, neoScriptHash, account, balance, Native_Prefix_Account);
+        }
+
+        [RpcMethod]
+        protected virtual JObject SetGasBalance(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 account = UInt160.Parse(_params[1].AsString());
+            ulong balance = ulong.Parse(_params[2].AsString());
+            return SetTokenBalance(session, gasScriptHash, account, balance, Native_Prefix_Account);
+        }
+
+        [RpcMethod]
+        protected virtual JObject SetNep17Balance(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 contract = UInt160.Parse(_params[1].AsString());
+            UInt160 account = UInt160.Parse(_params[2].AsString());
+            ulong balance = ulong.Parse(_params[3].AsString());
+            byte prefix = byte.Parse(_params.Count >= 5 ? _params[4].AsString() : "1");
+            return SetTokenBalance(session, contract, account, balance, prefix);
+        }
+
+        private JObject SetTokenBalance(string session, UInt160 contract, UInt160 account, ulong balance, byte prefixAccount)
+        {
+            byte[] balanceBytes = BitConverter.GetBytes(balance);
+            ApplicationEngine oldEngine = sessionToEngine[session];
+            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
+            JObject json = new();
+            if (contract == gasScriptHash)
+            {
+                prefixAccount = Native_Prefix_Account;
+                byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
+                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(new AccountState()));
+                AccountState state = storage.GetInteroperable<AccountState>();
+                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
+                storage.Add(balance - state.Balance);
+                state.Balance = balance;
+                json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
+                return json;
+            }else if (contract == neoScriptHash)
+            {
+                prefixAccount = Native_Prefix_Account;
+                byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
+                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(new NeoToken.NeoAccountState()));
+                NeoToken.NeoAccountState state = storage.GetInteroperable<NeoToken.NeoAccountState>();
+                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
+                storage.Add(balance - state.Balance);
+                state.Balance = balance;
+                json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
+                return json;
+            }
+            else
+            {
+                byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
+                oldEngine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(balanceBytes));
+                json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
+                return json;
+            }
         }
 
         private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp=0)
