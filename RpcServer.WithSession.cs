@@ -373,6 +373,16 @@ namespace Neo.Plugins
             json["state"] = newEngine.State;
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
+            if(json["exception"] != null)
+            {
+                string traceback = $"{json["exception"]}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
+                traceback += newEngine.FaultException.StackTrace;
+                foreach (ExecutionContext context in newEngine.InvocationStack)
+                {
+                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
+                }
+                json["traceback"] = traceback;
+            }
             try
             {
                 json["stack"] = new JArray(newEngine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
