@@ -21,6 +21,7 @@ namespace Neo.Plugins
     {
         Dictionary<string, ApplicationEngine> sessionToEngine = new();
         Dictionary<string, ulong> sessionToTimestamp = new();
+        List<LogEventArgs> logs = new();
 
         public UInt160 neoScriptHash = UInt160.Parse("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5");
         public UInt160 gasScriptHash = UInt160.Parse("0xd2a4cff31913016155e38e474a2c06d08be276cf");
@@ -334,6 +335,11 @@ namespace Neo.Plugins
             return ApplicationEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
         }
 
+        private void CacheLog(object sender, LogEventArgs logEventArgs)
+        {
+            logs.Add(logEventArgs);
+        }
+
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
         {
             Transaction tx = signers == null ? null : new Transaction
@@ -347,6 +353,8 @@ namespace Neo.Plugins
                 sessionToTimestamp[session] = 0;
             ApplicationEngine oldEngine, newEngine;
             DataCache validSnapshotBase;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
             if (timestamp == 0)
             {
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
@@ -366,6 +374,7 @@ namespace Neo.Plugins
                 validSnapshotBase = oldEngine.Snapshot;
                 newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
+            ApplicationEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionToEngine[session] = newEngine;
             JObject json = new();
@@ -380,6 +389,15 @@ namespace Neo.Plugins
                 foreach (ExecutionContext context in newEngine.InvocationStack)
                 {
                     traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
+                }
+                if(logs.Count > 0)
+                {
+                    traceback += $"\r\n-------Logs-------({logs.Count})";
+                }
+                foreach (LogEventArgs log in logs)
+                {
+                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash).Manifest.Name;
+                    traceback += $"\r\n[{log.ScriptHash}] {contractName}: {log.Message}";
                 }
                 json["traceback"] = traceback;
             }
