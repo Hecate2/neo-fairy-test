@@ -41,4 +41,5 @@ InstructionPointer=21390, OpCode RET, Script Length=21390
 
 Non official client: https://github.com/Hecate2/neo-test-client
 
+Instructions for running neo-cli and RpcServer from full source codes for debugging: https://github.com/Hecate2/how-to-debug-neo
 
