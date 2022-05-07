@@ -13,15 +13,16 @@ using System;
 using System.IO;
 using System.Numerics;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 
 namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        Dictionary<string, ApplicationEngine> sessionToEngine = new();
-        Dictionary<string, ulong> sessionToTimestamp = new();
-        List<LogEventArgs> logs = new();
+        ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
+        ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
+        ConcurrentQueue<LogEventArgs> logs = new();
 
         public UInt160 neoScriptHash = UInt160.Parse("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5");
         public UInt160 gasScriptHash = UInt160.Parse("0xd2a4cff31913016155e38e474a2c06d08be276cf");
@@ -81,7 +82,7 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string str = s.AsString();
-                json[str] = sessionToEngine.Remove(str) ? sessionToTimestamp.Remove(str) : false;
+                json[str] = sessionToEngine.Remove(str, out var _) ? sessionToTimestamp.Remove(str, out var _) : false;
             }
             return json;
         }
@@ -103,9 +104,9 @@ namespace Neo.Plugins
             string from = _params[0].AsString();
             string to = _params[1].AsString();
             sessionToEngine[to] = sessionToEngine[from];
-            sessionToEngine.Remove(from);
+            sessionToEngine.Remove(from, out var _);
             sessionToTimestamp[to] = sessionToTimestamp[from];
-            sessionToTimestamp.Remove(from);
+            sessionToTimestamp.Remove(from, out var _);
             JObject json = new();
             json[to] = from;
             return json;
@@ -337,7 +338,7 @@ namespace Neo.Plugins
 
         private void CacheLog(object sender, LogEventArgs logEventArgs)
         {
-            logs.Add(logEventArgs);
+            logs.Enqueue(logEventArgs);
         }
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
@@ -384,13 +385,13 @@ namespace Neo.Plugins
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if(json["exception"] != null)
             {
-                string traceback = $"{json["exception"]}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
+                string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (ExecutionContext context in newEngine.InvocationStack)
                 {
                     traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
                 }
-                if(logs.Count > 0)
+                if(!logs.IsEmpty)
                 {
                     traceback += $"\r\n-------Logs-------({logs.Count})";
                 }
@@ -429,7 +430,7 @@ namespace Neo.Plugins
             {
                 tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
                 // result["exception"] = GetExceptionMessage(e);
                 return;
@@ -449,6 +450,5 @@ namespace Neo.Plugins
                 result["pendingsignature"] = context.ToJson();
             }
         }
-
     }
 }
