@@ -83,5 +83,29 @@ namespace Neo.Plugins
             json[param0] = true;
             return json;
         }
+
+        [RpcMethod]
+        protected virtual JObject ListDebugInfo(JArray _params)
+        {
+            JArray scriptHashes = new JArray();
+            foreach (UInt160 s in contractScriptHashToSourceLineNumToInstructionPointer.Keys)
+            {
+                scriptHashes.Add(s.ToString());
+            }
+            return scriptHashes;
+        }
+
+        [RpcMethod]
+        protected virtual JObject DeleteDebugInfo(JArray _params)
+        {
+            JObject json = new();
+            foreach (var s in _params)
+            {
+                string str = s.AsString();
+                UInt160 scriptHash = UInt160.Parse(str);
+                json[str] = contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash) ? contractScriptHashToNefDbgNfo.Remove(scriptHash) : false;
+            }
+            return json;
+        }
     }
 }
