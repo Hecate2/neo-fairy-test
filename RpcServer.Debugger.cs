@@ -132,7 +132,12 @@ namespace Neo.Plugins
             {
                 string str = s.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
-                json[str] = contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash) && contractScriptHashToNefDbgNfo.Remove(scriptHash) && contractScriptHashToSourceLineFilenames.Remove(scriptHash);
+                contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash);
+                contractScriptHashToNefDbgNfo.Remove(scriptHash);
+                contractScriptHashToSourceLineFilenames.Remove(scriptHash);
+                contractScriptHashToAssemblyBreakpoints.Remove(scriptHash);
+                contractScriptHashToSourceCodeBreakpoints.Remove(scriptHash);
+                json[str] = true;
             }
             return json;
         }
