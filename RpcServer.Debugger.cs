@@ -26,10 +26,13 @@ namespace Neo.Plugins
     public partial class RpcServer
     {
         Dictionary<UInt160, Dictionary<int, int>> contractScriptHashToSourceLineNumToInstructionPointer = new();
+        Dictionary<UInt160, Dictionary<int, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
         Dictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
+        Dictionary<UInt160, HashSet<int>> contractScriptHashToAssemblyBreakpoints = new();
+        Dictionary<UInt160, HashSet<int>> contractScriptHashToSourceCodeBreakpoints = new();
         struct DumpNefPatterns
         {
-            public Regex opCodeRegex = new Regex(@"^(\d+)\s(.*?)(#\s.*)?$");  // 8039 SYSCALL 62-7D-5B-52 # System.Contract.Call SysCall
+            public Regex opCodeRegex = new Regex(@"^(\d+)\s(.*?)\s?(#\s.*)?$");  // 8039 SYSCALL 62-7D-5B-52 # System.Contract.Call SysCall
             public Regex sourceCodeRegex = new Regex(@"^#\sCode\s(.*\.cs)\sline\s(\d+):\s""(.*)""$");  // # Code NFTLoan.cs line 523: "ExecutionEngine.Assert((bool)Contract.Call(token, "transfer", CallFlags.All, tenant, Runtime.ExecutingScriptHash, neededAmount, tokenId, TRANSACTION_DATA), "NFT payback failed");"
             public Regex methodStartRegex = new Regex(@"^# Method\sStart\s(.*)$");  // # Method Start NFTLoan.NFTLoan.FlashBorrowDivisible
             public Regex methodEndRegex = new Regex(@"^# Method\sEnd\s(.*)$");  // # Method End NFTLoan.NFTLoan.FlashBorrowDivisible
@@ -52,6 +55,19 @@ namespace Neo.Plugins
             string dumpNef = _params[2].AsString();
             string[] lines = dumpNef.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries);
             int lineNum;
+            Dictionary<int, int> sourceLineNumToInstructionPointer;
+            if (!contractScriptHashToSourceLineNumToInstructionPointer.TryGetValue(scriptHash, out sourceLineNumToInstructionPointer))
+            {
+                sourceLineNumToInstructionPointer = new Dictionary<int, int>();
+                contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
+            }
+            Dictionary<int, OpCode> instructionPointerToOpCode;
+            if (!contractScriptHashToInstructionPointerToOpCode.TryGetValue(scriptHash, out instructionPointerToOpCode))
+            {
+                instructionPointerToOpCode = new Dictionary<int, OpCode>();
+                contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
+            }
+
             for (lineNum = 0; lineNum < lines.Length; ++lineNum)
             {
                 // foreach (var field in typeof(DumpNefPatterns).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
@@ -62,20 +78,22 @@ namespace Neo.Plugins
                 {
                     GroupCollection sourceCodeGroups = match.Groups;
                     int sourceCodeLineNum = int.Parse(sourceCodeGroups[2].ToString());
-                    ++lineNum;
-                    match = dumpNefPatterns.opCodeRegex.Match(lines[lineNum]);
+                    match = dumpNefPatterns.opCodeRegex.Match(lines[lineNum + 1]);
                     if (match.Success)
                     {
                         GroupCollection opcodeGroups = match.Groups;
                         int instructionPointer = int.Parse(opcodeGroups[1].ToString());
-                        Dictionary<int, int> sourceLineNumToInstructionPointer;
-                        if (!contractScriptHashToSourceLineNumToInstructionPointer.TryGetValue(scriptHash, out sourceLineNumToInstructionPointer))
-                        {
-                            sourceLineNumToInstructionPointer = new Dictionary<int, int>();
-                            contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
-                        }
                         sourceLineNumToInstructionPointer[sourceCodeLineNum] = instructionPointer;
                     }
+                    continue;
+                }
+                match = dumpNefPatterns.opCodeRegex.Match(lines[lineNum]);
+                if (match.Success)
+                {
+                    GroupCollection opcodeGroups = match.Groups;
+                    int instructionPointer = int.Parse(opcodeGroups[1].ToString());
+                    string[] opcodeAndOperand = opcodeGroups[2].ToString().Split();
+                    instructionPointerToOpCode[instructionPointer] = (OpCode)Enum.Parse(typeof(OpCode), opcodeAndOperand[0]);
                     continue;
                 }
             }
