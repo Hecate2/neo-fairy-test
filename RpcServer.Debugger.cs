@@ -25,11 +25,11 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        Dictionary<UInt160, Dictionary<int, int>> contractScriptHashToSourceLineNumToInstructionPointer = new();
+        struct SourceFilenameAndLineNum { public string SourceFilename; public int LineNum; }
+        Dictionary<UInt160, Dictionary<SourceFilenameAndLineNum, int>> contractScriptHashToSourceLineNumToInstructionPointer = new();
+        Dictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
         Dictionary<UInt160, Dictionary<int, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
         Dictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
-        Dictionary<UInt160, HashSet<int>> contractScriptHashToAssemblyBreakpoints = new();
-        Dictionary<UInt160, HashSet<int>> contractScriptHashToSourceCodeBreakpoints = new();
         struct DumpNefPatterns
         {
             public Regex opCodeRegex = new Regex(@"^(\d+)\s(.*?)\s?(#\s.*)?$");  // 8039 SYSCALL 62-7D-5B-52 # System.Contract.Call SysCall
@@ -55,18 +55,12 @@ namespace Neo.Plugins
             string dumpNef = _params[2].AsString();
             string[] lines = dumpNef.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries);
             int lineNum;
-            Dictionary<int, int> sourceLineNumToInstructionPointer;
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.TryGetValue(scriptHash, out sourceLineNumToInstructionPointer))
-            {
-                sourceLineNumToInstructionPointer = new Dictionary<int, int>();
-                contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
-            }
-            Dictionary<int, OpCode> instructionPointerToOpCode;
-            if (!contractScriptHashToInstructionPointerToOpCode.TryGetValue(scriptHash, out instructionPointerToOpCode))
-            {
-                instructionPointerToOpCode = new Dictionary<int, OpCode>();
-                contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
-            }
+            Dictionary<SourceFilenameAndLineNum, int> sourceLineNumToInstructionPointer = new();
+            contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
+            Dictionary<int, OpCode> instructionPointerToOpCode = new();
+            contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
+            HashSet<string> filenames = new();
+            contractScriptHashToSourceLineFilenames[scriptHash] = filenames;
 
             for (lineNum = 0; lineNum < lines.Length; ++lineNum)
             {
@@ -83,7 +77,9 @@ namespace Neo.Plugins
                     {
                         GroupCollection opcodeGroups = match.Groups;
                         int instructionPointer = int.Parse(opcodeGroups[1].ToString());
-                        sourceLineNumToInstructionPointer[sourceCodeLineNum] = instructionPointer;
+                        string filename = sourceCodeGroups[1].ToString();
+                        filenames.Add(filename);
+                        sourceLineNumToInstructionPointer[new SourceFilenameAndLineNum { SourceFilename=filename, LineNum=sourceCodeLineNum }] = instructionPointer;
                     }
                     continue;
                 }
@@ -114,6 +110,21 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JObject ListFilenamesOfContract(JArray _params)
+        {
+            string scriptHashStr = _params[0].AsString();
+            UInt160 scriptHash = UInt160.Parse(scriptHashStr);
+            List<string> filenameList = contractScriptHashToSourceLineFilenames[scriptHash].ToList();
+            filenameList.Sort();
+            JArray filenames = new JArray();
+            foreach (string filename in filenameList)
+            {
+                filenames.Add(filename);
+            }
+            return filenames;
+        }
+
+        [RpcMethod]
         protected virtual JObject DeleteDebugInfo(JArray _params)
         {
             JObject json = new();
@@ -121,7 +132,7 @@ namespace Neo.Plugins
             {
                 string str = s.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
-                json[str] = contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash) ? contractScriptHashToNefDbgNfo.Remove(scriptHash) : false;
+                json[str] = contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash) && contractScriptHashToNefDbgNfo.Remove(scriptHash) && contractScriptHashToSourceLineFilenames.Remove(scriptHash);
             }
             return json;
         }
