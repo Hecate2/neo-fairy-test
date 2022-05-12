@@ -1,4 +1,4 @@
-﻿// include this file in neo-modules/src/RpcServer/RpcServer.csproj
+// include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
 using Neo.IO.Json;
@@ -18,7 +18,7 @@ namespace Neo.Plugins
         protected virtual JObject SetAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
@@ -45,7 +45,7 @@ namespace Neo.Plugins
         protected virtual JObject ListAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
@@ -63,7 +63,7 @@ namespace Neo.Plugins
         protected virtual JObject DeleteAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
@@ -95,7 +95,7 @@ namespace Neo.Plugins
         protected virtual JObject SetSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
@@ -115,7 +115,7 @@ namespace Neo.Plugins
                 i++;
                 JObject json = new();
                 SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { SourceFilename=sourceCodeFilename, LineNum=sourceCodeBreakpointLineNum };
-                if (contractScriptHashToSourceLineNumToInstructionPointer[scriptHash].ContainsKey(breakpoint))
+                if (contractScriptHashToSourceLineNums[scriptHash].Contains(breakpoint))
                 {
                     sourceCodeBreakpoints.Add(breakpoint);
                     json["filename"] = sourceCodeFilename;
@@ -134,7 +134,7 @@ namespace Neo.Plugins
         protected virtual JObject ListSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
@@ -154,7 +154,7 @@ namespace Neo.Plugins
         protected virtual JObject DeleteSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            if (!contractScriptHashToSourceLineNumToInstructionPointer.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }

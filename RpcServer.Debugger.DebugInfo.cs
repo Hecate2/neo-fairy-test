@@ -1,4 +1,4 @@
-﻿// include this file in neo-modules/src/RpcServer/RpcServer.csproj
+// include this file in neo-modules/src/RpcServer/RpcServer.csproj
 // and build your own RpcServer
 
 using Neo.IO;
@@ -25,8 +25,9 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum; }
-        Dictionary<UInt160, Dictionary<SourceFilenameAndLineNum, uint>> contractScriptHashToSourceLineNumToInstructionPointer = new();
+        public struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum;}
+        Dictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
+        Dictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
         Dictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
         Dictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
         Dictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
@@ -54,14 +55,17 @@ namespace Neo.Plugins
             // give me the content of that txt file!
             string dumpNef = _params[2].AsString();
             string[] lines = dumpNef.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries);
-            uint lineNum;
-            Dictionary<SourceFilenameAndLineNum, uint> sourceLineNumToInstructionPointer = new();
-            contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
+
+            HashSet<SourceFilenameAndLineNum> sourceFilenameAndLineNums = new();
+            contractScriptHashToSourceLineNums[scriptHash] = sourceFilenameAndLineNums;
+            Dictionary<uint, SourceFilenameAndLineNum> InstructionPointerToSourceLineNum = new();
+            contractScriptHashToInstructionPointerToSourceLineNum[scriptHash] = InstructionPointerToSourceLineNum;
             Dictionary<uint, OpCode> instructionPointerToOpCode = new();
             contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
             HashSet<string> filenames = new();
             contractScriptHashToSourceLineFilenames[scriptHash] = filenames;
 
+            uint lineNum;
             for (lineNum = 0; lineNum < lines.Length; ++lineNum)
             {
                 // foreach (var field in typeof(DumpNefPatterns).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
@@ -79,7 +83,9 @@ namespace Neo.Plugins
                         uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                         string filename = sourceCodeGroups[1].ToString();
                         filenames.Add(filename);
-                        sourceLineNumToInstructionPointer[new SourceFilenameAndLineNum { SourceFilename=filename, LineNum=sourceCodeLineNum }] = instructionPointer;
+                        SourceFilenameAndLineNum sourceFilenameAndLineNum = new SourceFilenameAndLineNum { SourceFilename=filename, LineNum=sourceCodeLineNum };
+                        InstructionPointerToSourceLineNum[instructionPointer] = sourceFilenameAndLineNum;
+                        sourceFilenameAndLineNums.Add(sourceFilenameAndLineNum);
                     }
                     continue;
                 }
@@ -102,7 +108,7 @@ namespace Neo.Plugins
         protected virtual JObject ListDebugInfo(JArray _params)
         {
             JArray scriptHashes = new JArray();
-            foreach (UInt160 s in contractScriptHashToSourceLineNumToInstructionPointer.Keys)
+            foreach (UInt160 s in contractScriptHashToInstructionPointerToSourceLineNum.Keys)
             {
                 scriptHashes.Add(s.ToString());
             }
@@ -132,7 +138,7 @@ namespace Neo.Plugins
             {
                 string str = s.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
-                contractScriptHashToSourceLineNumToInstructionPointer.Remove(scriptHash);
+                contractScriptHashToInstructionPointerToSourceLineNum.Remove(scriptHash);
                 contractScriptHashToNefDbgNfo.Remove(scriptHash);
                 contractScriptHashToSourceLineFilenames.Remove(scriptHash);
                 contractScriptHashToAssemblyBreakpoints.Remove(scriptHash);

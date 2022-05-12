@@ -77,7 +77,6 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject DeleteSnapshots(JArray _params)
         {
-            int count = _params.Count;
             JObject json = new();
             foreach (var s in _params)
             {
