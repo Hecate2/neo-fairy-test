@@ -20,9 +20,9 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
-        ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
-        ConcurrentQueue<LogEventArgs> logs = new();
+        readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
+        readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
+        readonly ConcurrentQueue<LogEventArgs> logs = new();
 
         public UInt160 neoScriptHash = UInt160.Parse("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5");
         public UInt160 gasScriptHash = UInt160.Parse("0xd2a4cff31913016155e38e474a2c06d08be276cf");

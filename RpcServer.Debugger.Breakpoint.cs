@@ -4,6 +4,7 @@
 using Neo.IO.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
 
@@ -11,8 +12,8 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        Dictionary<UInt160, HashSet<uint>> contractScriptHashToAssemblyBreakpoints = new();
-        Dictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
+        readonly ConcurrentDictionary<UInt160, HashSet<uint>> contractScriptHashToAssemblyBreakpoints = new();
+        readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
 
         [RpcMethod]
         protected virtual JObject SetAssemblyBreakpoints(JArray _params)

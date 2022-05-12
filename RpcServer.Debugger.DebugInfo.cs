@@ -26,11 +26,11 @@ namespace Neo.Plugins
     public partial class RpcServer
     {
         public struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum;}
-        Dictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
-        Dictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
-        Dictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
-        Dictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
-        Dictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
+        readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
+        readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
+        readonly ConcurrentDictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
+        readonly ConcurrentDictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
+        readonly ConcurrentDictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
         struct DumpNefPatterns
         {
             public Regex opCodeRegex = new Regex(@"^(\d+)\s(.*?)\s?(#\s.*)?$");  // 8039 SYSCALL 62-7D-5B-52 # System.Contract.Call SysCall
@@ -138,11 +138,11 @@ namespace Neo.Plugins
             {
                 string str = s.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
-                contractScriptHashToInstructionPointerToSourceLineNum.Remove(scriptHash);
-                contractScriptHashToNefDbgNfo.Remove(scriptHash);
-                contractScriptHashToSourceLineFilenames.Remove(scriptHash);
-                contractScriptHashToAssemblyBreakpoints.Remove(scriptHash);
-                contractScriptHashToSourceCodeBreakpoints.Remove(scriptHash);
+                contractScriptHashToInstructionPointerToSourceLineNum.Remove(scriptHash, out _);
+                contractScriptHashToNefDbgNfo.Remove(scriptHash, out _);
+                contractScriptHashToSourceLineFilenames.Remove(scriptHash, out _);
+                contractScriptHashToAssemblyBreakpoints.Remove(scriptHash, out _);
+                contractScriptHashToSourceCodeBreakpoints.Remove(scriptHash, out _);
                 json[str] = true;
             }
             return json;
