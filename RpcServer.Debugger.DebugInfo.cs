@@ -25,10 +25,10 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        struct SourceFilenameAndLineNum { public string SourceFilename; public int LineNum; }
-        Dictionary<UInt160, Dictionary<SourceFilenameAndLineNum, int>> contractScriptHashToSourceLineNumToInstructionPointer = new();
+        struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum; }
+        Dictionary<UInt160, Dictionary<SourceFilenameAndLineNum, uint>> contractScriptHashToSourceLineNumToInstructionPointer = new();
         Dictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
-        Dictionary<UInt160, Dictionary<int, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
+        Dictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
         Dictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
         struct DumpNefPatterns
         {
@@ -54,10 +54,10 @@ namespace Neo.Plugins
             // give me the content of that txt file!
             string dumpNef = _params[2].AsString();
             string[] lines = dumpNef.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries);
-            int lineNum;
-            Dictionary<SourceFilenameAndLineNum, int> sourceLineNumToInstructionPointer = new();
+            uint lineNum;
+            Dictionary<SourceFilenameAndLineNum, uint> sourceLineNumToInstructionPointer = new();
             contractScriptHashToSourceLineNumToInstructionPointer[scriptHash] = sourceLineNumToInstructionPointer;
-            Dictionary<int, OpCode> instructionPointerToOpCode = new();
+            Dictionary<uint, OpCode> instructionPointerToOpCode = new();
             contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
             HashSet<string> filenames = new();
             contractScriptHashToSourceLineFilenames[scriptHash] = filenames;
@@ -71,12 +71,12 @@ namespace Neo.Plugins
                 if (match.Success)
                 {
                     GroupCollection sourceCodeGroups = match.Groups;
-                    int sourceCodeLineNum = int.Parse(sourceCodeGroups[2].ToString());
+                    uint sourceCodeLineNum = uint.Parse(sourceCodeGroups[2].ToString());
                     match = dumpNefPatterns.opCodeRegex.Match(lines[lineNum + 1]);
                     if (match.Success)
                     {
                         GroupCollection opcodeGroups = match.Groups;
-                        int instructionPointer = int.Parse(opcodeGroups[1].ToString());
+                        uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                         string filename = sourceCodeGroups[1].ToString();
                         filenames.Add(filename);
                         sourceLineNumToInstructionPointer[new SourceFilenameAndLineNum { SourceFilename=filename, LineNum=sourceCodeLineNum }] = instructionPointer;
@@ -87,7 +87,7 @@ namespace Neo.Plugins
                 if (match.Success)
                 {
                     GroupCollection opcodeGroups = match.Groups;
-                    int instructionPointer = int.Parse(opcodeGroups[1].ToString());
+                    uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                     string[] opcodeAndOperand = opcodeGroups[2].ToString().Split();
                     instructionPointerToOpCode[instructionPointer] = (OpCode)Enum.Parse(typeof(OpCode), opcodeAndOperand[0]);
                     continue;

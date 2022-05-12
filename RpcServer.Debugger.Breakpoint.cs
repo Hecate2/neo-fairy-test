@@ -11,7 +11,7 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        Dictionary<UInt160, HashSet<int>> contractScriptHashToAssemblyBreakpoints = new();
+        Dictionary<UInt160, HashSet<uint>> contractScriptHashToAssemblyBreakpoints = new();
         Dictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
 
         [RpcMethod]
@@ -22,17 +22,17 @@ namespace Neo.Plugins
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
-            HashSet<int> assemblyBreakpoints;
+            HashSet<uint> assemblyBreakpoints;
             if (!contractScriptHashToAssemblyBreakpoints.TryGetValue(scriptHash, out assemblyBreakpoints))
             {
-                assemblyBreakpoints = new HashSet<int>();
+                assemblyBreakpoints = new HashSet<uint>();
                 contractScriptHashToAssemblyBreakpoints[scriptHash] = assemblyBreakpoints;
             }
             JObject json = new();
             for (int i = 1; i<_params.Count; i++)
             {
                 string breakpointInstructionPointerStr = _params[i].AsString();
-                int breakpointInstructionPointer = int.Parse(breakpointInstructionPointerStr);
+                uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
                 if (contractScriptHashToInstructionPointerToOpCode[scriptHash].ContainsKey(breakpointInstructionPointer))
                     json[breakpointInstructionPointerStr] = assemblyBreakpoints.Add(breakpointInstructionPointer);
                 else
@@ -49,10 +49,10 @@ namespace Neo.Plugins
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
-            List<int> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
+            List<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
             assemblyBreakpoints.Sort();
             JArray breakpointList = new();
-            foreach (int breakpointInstructionPointer in assemblyBreakpoints)
+            foreach (uint breakpointInstructionPointer in assemblyBreakpoints)
             {
                 breakpointList.Add(breakpointInstructionPointer);
             }
@@ -70,9 +70,9 @@ namespace Neo.Plugins
             JObject json = new();
             if (_params.Count == 1)  // delete all breakpoints
             {
-                List<int> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
+                List<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
                 assemblyBreakpoints.Sort();
-                foreach (int breakpointInstructionPointer in assemblyBreakpoints)
+                foreach (uint breakpointInstructionPointer in assemblyBreakpoints)
                 {
                     json[breakpointInstructionPointer.ToString()] = true;
                 }
@@ -80,11 +80,11 @@ namespace Neo.Plugins
             }
             else
             {
-                HashSet<int> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash];
+                HashSet<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash];
                 for (int i = 1; i<_params.Count; i++)
                 {
                     string breakpointInstructionPointerStr = _params[i].AsString();
-                    int breakpointInstructionPointer = int.Parse(breakpointInstructionPointerStr);
+                    uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
                     json[breakpointInstructionPointerStr] = assemblyBreakpoints.Remove(breakpointInstructionPointer);
                 }
             }
@@ -111,7 +111,7 @@ namespace Neo.Plugins
             {
                 string sourceCodeFilename = _params[i].AsString();
                 i++;
-                int sourceCodeBreakpointLineNum = int.Parse(_params[i].AsString());
+                uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
                 i++;
                 JObject json = new();
                 SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { SourceFilename=sourceCodeFilename, LineNum=sourceCodeBreakpointLineNum };
@@ -179,7 +179,7 @@ namespace Neo.Plugins
                 {
                     string sourceCodeBreakpointFilename = _params[i].AsString();
                     i++;
-                    int sourceCodeBreakpointLineNum = int.Parse(_params[i].AsString());
+                    uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
                     i++;
                     if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { SourceFilename=sourceCodeBreakpointFilename, LineNum=sourceCodeBreakpointLineNum }))
                     {
