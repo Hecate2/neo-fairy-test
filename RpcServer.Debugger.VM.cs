@@ -9,6 +9,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.SmartContract.Manifest;
 using Neo.VM;
+using Neo.VM.Types;
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -360,6 +361,96 @@ namespace Neo.Plugins
         protected virtual JObject DebugStepOver(JArray _params)
         {
             return DebugStepOverSourceCode(_params);
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetLocalVariables(JArray _params)
+        {
+            string session = _params[0].AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).LocalVariables.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetArguments(JArray _params)
+        {
+            string session = _params[0].AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).Arguments.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetStaticFields(JArray _params)
+        {
+            string session = _params[0].AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).StaticFields.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetEvaluationStack(JArray _params)
+        {
+            string session = _params[0].AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).EvaluationStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetInstructionPointer(JArray _params)
+        {
+            string session = _params[0].AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).InstructionPointer);
+        }
+
+        [RpcMethod]
+        protected virtual JObject GetVariableValueByName(JArray _params)
+        {
+            string session = _params[0].AsString();
+            string variableName = _params[1].AsString();
+            int invocationStackIndex = _params.Count > 2 ? int.Parse(_params[2].AsString()) : 0;
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
+            UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
+            int instructionPointer = invocationStackItem.InstructionPointer;
+            JObject method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
+            if (method != JObject.Null)
+            {
+                foreach (JObject param in (JArray)method["params"])
+                {
+                    string[] nameTypeAndIndex = param.AsString().Split(',');
+                    if (nameTypeAndIndex[0] == variableName)
+                    {
+                        int index = int.Parse(nameTypeAndIndex[2]);
+                        return invocationStackItem.Arguments[index].ToJson();
+                    }
+                }
+                foreach (JObject param in (JArray)method["variables"])
+                {
+                    string[] nameTypeAndIndex = param.AsString().Split(',');
+                    if (nameTypeAndIndex[0] == variableName)
+                    {
+                        int index = int.Parse(nameTypeAndIndex[2]);
+                        return invocationStackItem.LocalVariables[index].ToJson();
+                    }
+                }
+            }
+            JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"];
+            foreach (JObject param in staticVariables)
+            {
+                string[] nameTypeAndIndex = param.AsString().Split(',');
+                if (nameTypeAndIndex[0] == variableName)
+                {
+                    int index = int.Parse(nameTypeAndIndex[2]);
+                    return invocationStackItem.StaticFields[index].ToJson();
+                }
+            }
+            throw new ArgumentException($"Variable name {variableName} not found at InvovationStack[{invocationStackIndex}] {invocationStackScriptHash} {instructionPointer}.");
         }
     }
 }

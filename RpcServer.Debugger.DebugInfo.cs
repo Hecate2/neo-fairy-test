@@ -147,5 +147,19 @@ namespace Neo.Plugins
             }
             return json;
         }
+
+        [RpcMethod]
+        protected virtual JObject GetMethodByInstructionPointer(JArray _params)
+        {
+            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            uint instrcutionPointer = uint.Parse(_params[1].AsString());
+            foreach (JObject method in (JArray)contractScriptHashToNefDbgNfo[scriptHash]["methods"])
+            {
+                string[] rangeStr = method["range"].AsString().Split("-");
+                if (instrcutionPointer >= uint.Parse(rangeStr[0]) && instrcutionPointer <= uint.Parse(rangeStr[1]))
+                    return method;
+            }
+            return JObject.Null;
+        }
     }
 }
