@@ -105,13 +105,13 @@ namespace Neo.Plugins
             json["breakreason"] = breakReason;
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
-            if ((breakReason & BreakReason.SourceCode) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
+            try
             {
                 SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
                 json["sourcefilename"] = sourceCodeBreakpoint.SourceFilename;
                 json["sourcelinenum"] = sourceCodeBreakpoint.LineNum;
             }
-            else
+            catch
             {
                 json["sourcefilename"] = null;
                 json["sourcelinenum"] = null;
@@ -196,6 +196,8 @@ namespace Neo.Plugins
              || currentOpCode == OpCode.SYSCALL))
             {
                 engine.ExecuteNext();
+                if (engine.CurrentContext.CurrentInstruction.OpCode == OpCode.INITSLOT)
+                    engine.ExecuteNext();
                 engine.State = VMState.BREAK;
                 actualBreakReason |= BreakReason.Call;
                 return engine;
@@ -259,14 +261,28 @@ namespace Neo.Plugins
                 engine = ExecuteAndCheck(engine, out breakReason);
             return engine;
         }
+
         private ApplicationEngine StepInto(ApplicationEngine engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
                 engine.State = VMState.NONE;
             while (engine.State == VMState.NONE)
-                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint & BreakReason.SourceCodeBreakpoint & BreakReason.Call);
+                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.Call);
             return engine;
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugStepInto(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            BreakReason breakReason = BreakReason.None;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
+            StepInto(newEngine, out breakReason);
+            ApplicationEngine.Log -= CacheLog;
+            return DumpDebugResultJson(newEngine, breakReason);
         }
 
         private ApplicationEngine StepOut(ApplicationEngine engine, out BreakReason breakReason)
@@ -275,8 +291,21 @@ namespace Neo.Plugins
             if (engine.State == VMState.BREAK)
                 engine.State = VMState.NONE;
             while (engine.State == VMState.NONE)
-                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint & BreakReason.SourceCodeBreakpoint & BreakReason.Return);
+                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.Return);
             return engine;
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugStepOut(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            BreakReason breakReason = BreakReason.None;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
+            StepOut(newEngine, out breakReason);
+            ApplicationEngine.Log -= CacheLog;
+            return DumpDebugResultJson(newEngine, breakReason);
         }
 
         private ApplicationEngine StepOver(ApplicationEngine engine, out BreakReason breakReason)
@@ -288,7 +317,7 @@ namespace Neo.Plugins
             int invocationStackCount = engine.InvocationStack.Count;
             while (engine.State == VMState.NONE)
             {
-                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint & BreakReason.SourceCodeBreakpoint & BreakReason.SourceCode);
+                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.SourceCode);
                 if (engine.State == VMState.BREAK)
                     if ((breakReason & BreakReason.AssemblyBreakpoint) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
                         break;
@@ -298,6 +327,19 @@ namespace Neo.Plugins
                     engine.State = VMState.NONE;
             }
             return engine;
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugStepOver(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            BreakReason breakReason = BreakReason.None;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
+            StepOver(newEngine, out breakReason);
+            ApplicationEngine.Log -= CacheLog;
+            return DumpDebugResultJson(newEngine, breakReason);
         }
     }
 }
