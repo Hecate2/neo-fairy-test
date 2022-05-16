@@ -63,7 +63,7 @@ namespace Neo.Plugins
             ApplicationEngine oldEngine, newEngine;
             logs.Clear();
             ApplicationEngine.Log += CacheLog;
-            BreakReason breakReason;
+            BreakReason breakReason = BreakReason.None;
             if (timestamp == 0)
             {
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
@@ -81,12 +81,41 @@ namespace Neo.Plugins
                 newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
             ApplicationEngine.Log -= CacheLog;
-            if (writeSnapshot && newEngine.State == VMState.HALT)
+            if (writeSnapshot && newEngine.State != VMState.FAULT)
                 debugSessionToEngine[session] = newEngine;
-            JObject json = new();
-            json["script"] = Convert.ToBase64String(script);
+            return DumpDebugResultJson(newEngine, breakReason);
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugContinue(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            BreakReason breakReason = BreakReason.None;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
+            Execute(newEngine, out breakReason);
+            ApplicationEngine.Log -= CacheLog;
+            return DumpDebugResultJson(newEngine, breakReason);
+        }
+
+        private JObject DumpDebugResultJson(JObject json, ApplicationEngine newEngine, BreakReason breakReason)
+        {
             json["state"] = newEngine.State;
             json["breakreason"] = breakReason;
+            json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
+            json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
+            if ((breakReason & BreakReason.SourceCode) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
+            {
+                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
+                json["sourcefilename"] = sourceCodeBreakpoint.SourceFilename;
+                json["sourcelinenum"] = sourceCodeBreakpoint.LineNum;
+            }
+            else
+            {
+                json["sourcefilename"] = null;
+                json["sourcelinenum"] = null;
+            }
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
@@ -117,6 +146,11 @@ namespace Neo.Plugins
                 json["stack"] = "error: invalid operation";
             }
             return json;
+        }
+
+        private JObject DumpDebugResultJson(ApplicationEngine newEngine, BreakReason breakReason)
+        {
+            return DumpDebugResultJson(new JObject(), newEngine, breakReason);
         }
 
         [RpcMethod]
@@ -155,9 +189,7 @@ namespace Neo.Plugins
         {
             actualBreakReason = BreakReason.None;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
-            {
                 return engine;
-            }
             OpCode currentOpCode = engine.CurrentContext.CurrentInstruction.OpCode;
             if ((requiredBreakReason & BreakReason.Call) > 0 &&
                (currentOpCode == OpCode.CALL || currentOpCode == OpCode.CALLA || currentOpCode == OpCode.CALLT || currentOpCode == OpCode.CALL_L
@@ -176,11 +208,14 @@ namespace Neo.Plugins
                 return engine;
             }
             engine.ExecuteNext();
+            if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
+                return engine;
             UInt160 currentScriptHash = engine.CurrentScriptHash;
             uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
             if ((requiredBreakReason & BreakReason.AssemblyBreakpoint) > 0)
             {
-                if (contractScriptHashToAssemblyBreakpoints[currentScriptHash]
+                if (contractScriptHashToAssemblyBreakpoints.ContainsKey(currentScriptHash)
+                 && contractScriptHashToAssemblyBreakpoints[currentScriptHash]
                     .Contains(currentInstructionPointer))
                 {
                     engine.State = VMState.BREAK;
@@ -190,7 +225,9 @@ namespace Neo.Plugins
             }
             if ((requiredBreakReason & BreakReason.SourceCodeBreakpoint) > 0)
             {
-                if (contractScriptHashToSourceCodeBreakpoints[currentScriptHash]
+                if (contractScriptHashToSourceCodeBreakpoints.ContainsKey(currentScriptHash)
+                 && contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
+                 && contractScriptHashToSourceCodeBreakpoints[currentScriptHash]
                     .Contains(contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer]))
                 {
                     engine.State = VMState.BREAK;
@@ -200,7 +237,9 @@ namespace Neo.Plugins
             }
             if ((requiredBreakReason & BreakReason.SourceCode) > 0)
             {
-                if (contractScriptHashToSourceLineNums[currentScriptHash]
+                if (contractScriptHashToSourceLineNums.ContainsKey(currentScriptHash)
+                 && contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
+                 && contractScriptHashToSourceLineNums[currentScriptHash]
                     .Contains(contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer]))
                 {
                     engine.State = VMState.BREAK;
