@@ -104,6 +104,7 @@ namespace Neo.Plugins
             json["state"] = newEngine.State;
             json["breakreason"] = breakReason;
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
+            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash).Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
             try
             {
@@ -308,7 +309,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private ApplicationEngine StepOver(ApplicationEngine engine, out BreakReason breakReason)
+        private ApplicationEngine StepOverSourceCode(ApplicationEngine engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
@@ -330,16 +331,35 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepOver(JArray _params)
+        protected virtual JObject DebugStepOverSourceCode(JArray _params)
         {
             string session = _params[0].AsString();
             ApplicationEngine newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
             ApplicationEngine.Log += CacheLog;
-            StepOver(newEngine, out breakReason);
+            StepOverSourceCode(newEngine, out breakReason);
             ApplicationEngine.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, breakReason);
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugStepOverAssembly(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ApplicationEngine newEngine = debugSessionToEngine[session];
+            BreakReason breakReason = BreakReason.None;
+            logs.Clear();
+            ApplicationEngine.Log += CacheLog;
+            ExecuteAndCheck(newEngine, out breakReason);
+            ApplicationEngine.Log -= CacheLog;
+            return DumpDebugResultJson(newEngine, BreakReason.None);
+        }
+
+        [RpcMethod]
+        protected virtual JObject DebugStepOver(JArray _params)
+        {
+            return DebugStepOverSourceCode(_params);
         }
     }
 }
