@@ -353,6 +353,7 @@ namespace Neo.Plugins
                 sessionToTimestamp[session] = 0;
             ApplicationEngine oldEngine, newEngine;
             DataCache validSnapshotBase;
+            Block block = null;
             logs.Clear();
             ApplicationEngine.Log += CacheLog;
             if (timestamp == 0)
@@ -372,7 +373,8 @@ namespace Neo.Plugins
             {
                 oldEngine = sessionToEngine[session];
                 validSnapshotBase = oldEngine.Snapshot;
-                newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                block = CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp);
+                newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
             ApplicationEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
@@ -411,12 +413,12 @@ namespace Neo.Plugins
             }
             if (newEngine.State != VMState.FAULT)
             {
-                ProcessInvokeWithWalletAndSnapshot(validSnapshotBase, json, signers);
+                ProcessInvokeWithWalletAndSnapshot(validSnapshotBase, json, signers, block: block);
             }
             return json;
         }
 
-        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signers signers = null)
+        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signers signers = null, Block block = null)
         {
             if (wallet == null || signers == null) return;
 
@@ -427,7 +429,7 @@ namespace Neo.Plugins
             Transaction tx;
             try
             {
-                tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
+                tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
             }
             catch //(Exception e)
             {
