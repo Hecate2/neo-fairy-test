@@ -1,6 +1,3 @@
-// include this file in neo-modules/src/RpcServer/RpcServer.csproj
-// and build your own RpcServer
-
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
@@ -20,8 +17,6 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
-        readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
         readonly ConcurrentQueue<LogEventArgs> logs = new();
 
         public UInt160 neoScriptHash = UInt160.Parse("0xef4073a0f2b305a38ec4050e4d3d28bc40ea63f5");
@@ -55,95 +50,6 @@ namespace Neo.Plugins
             byte[] script = Convert.FromBase64String(_params[2].AsString());
             Signers signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers);
-        }
-
-        [RpcMethod]
-        protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
-        {
-            JObject json = new();
-            foreach(var param in _params)
-            {
-                string session = param.AsString();
-                if (sessionToEngine.TryGetValue(session, out _))
-                    json[session] = true;
-                else
-                    json[session] = false;
-                sessionToEngine[session] = ApplicationEngine.Run(new byte[] {0x40}, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
-                sessionToTimestamp[session] = 0;
-            }
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JObject DeleteSnapshots(JArray _params)
-        {
-            JObject json = new();
-            foreach (var s in _params)
-            {
-                string str = s.AsString();
-                json[str] = sessionToEngine.Remove(str, out var _) ? sessionToTimestamp.Remove(str, out var _) : false;
-            }
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JObject ListSnapshots(JArray _params)
-        {
-            JArray session = new JArray();
-            foreach (string s in sessionToEngine.Keys)
-            {
-                session.Add(s);
-            }
-            return session;
-        }
-
-        [RpcMethod]
-        protected virtual JObject RenameSnapshot(JArray _params)
-        {
-            string from = _params[0].AsString();
-            string to = _params[1].AsString();
-            sessionToEngine[to] = sessionToEngine[from];
-            sessionToEngine.Remove(from, out var _);
-            sessionToTimestamp[to] = sessionToTimestamp[from];
-            sessionToTimestamp.Remove(from, out var _);
-            JObject json = new();
-            json[to] = from;
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JObject CopySnapshot(JArray _params)
-        {
-            string from = _params[0].AsString();
-            string to = _params[1].AsString();
-            sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
-            sessionToTimestamp[to] = sessionToTimestamp[from];
-            JObject json = new();
-            json[to] = from;
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JObject SetSnapshotTimestamp(JArray _params)
-        {
-            string session = _params[0].AsString();
-            ulong timestamp = ulong.Parse(_params[1].AsString());
-            sessionToTimestamp[session] = timestamp;
-            JObject json = new();
-            json[session] = timestamp;
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JObject GetSnapshotTimeStamp(JArray _params)
-        {
-            JObject json = new();
-            foreach (var s in _params)
-            {
-                string session = s.AsString();
-                json[session] = sessionToTimestamp.GetValueOrDefault(session, (ulong)0);
-            }
-            return json;
         }
 
         [RpcMethod]

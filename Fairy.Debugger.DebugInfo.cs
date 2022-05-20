@@ -1,26 +1,13 @@
-// include this file in neo-modules/src/RpcServer/RpcServer.csproj
-// and build your own RpcServer
-
-using Neo.IO;
 using Neo.IO.Json;
-using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
-using Neo.SmartContract.Native;
-using Neo.SmartContract.Manifest;
 using Neo.VM;
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Numerics;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace Neo.Plugins
 {
@@ -43,26 +30,18 @@ namespace Neo.Plugins
 
         public static string Unzip(byte[] zippedBuffer)
         {
-            using (var zippedStream = new MemoryStream(zippedBuffer))
+            using var zippedStream = new MemoryStream(zippedBuffer);
+            using var archive = new ZipArchive(zippedStream);
+            var entry = archive.Entries.FirstOrDefault();
+            if (entry != null)
             {
-                using (var archive = new ZipArchive(zippedStream))
-                {
-                    var entry = archive.Entries.FirstOrDefault();
-                    if (entry != null)
-                    {
-                        using (var unzippedEntryStream = entry.Open())
-                        {
-                            using (var ms = new MemoryStream())
-                            {
-                                unzippedEntryStream.CopyTo(ms);
-                                var unzippedArray = ms.ToArray();
-                                return Encoding.Default.GetString(unzippedArray);
-                            }
-                        }
-                    }
-                    throw new ArgumentException("No file found in zip archive");
-                }
+                using var unzippedEntryStream = entry.Open();
+                using var ms = new MemoryStream();
+                unzippedEntryStream.CopyTo(ms);
+                var unzippedArray = ms.ToArray();
+                return Encoding.Default.GetString(unzippedArray);
             }
+            throw new ArgumentException("No file found in zip archive");
         }
 
         [RpcMethod]

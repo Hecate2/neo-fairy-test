@@ -1,12 +1,8 @@
-// include this file in neo-modules/src/RpcServer/RpcServer.csproj
-// and build your own RpcServer
-
 using Neo.IO.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Reflection;
 
 namespace Neo.Plugins
 {

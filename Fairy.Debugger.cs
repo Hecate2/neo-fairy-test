@@ -1,32 +1,17 @@
-// include this file in neo-modules/src/RpcServer/RpcServer.csproj
-// and build your own RpcServer
-
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Neo.SmartContract.Manifest;
 using Neo.VM;
-using Neo.VM.Types;
 using System;
-using System.IO;
-using System.IO.Compression;
-using System.Numerics;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        readonly ConcurrentDictionary<string, ApplicationEngine> debugSessionToEngine = new();
         enum BreakReason
         {
             None=0,
@@ -82,7 +67,7 @@ namespace Neo.Plugins
                 newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
             ApplicationEngine.Log -= CacheLog;
-            if (writeSnapshot && newEngine.State != VMState.FAULT)
+            if (writeSnapshot)
                 debugSessionToEngine[session] = newEngine;
             return DumpDebugResultJson(newEngine, breakReason);
         }
@@ -153,29 +138,6 @@ namespace Neo.Plugins
         private JObject DumpDebugResultJson(ApplicationEngine newEngine, BreakReason breakReason)
         {
             return DumpDebugResultJson(new JObject(), newEngine, breakReason);
-        }
-
-        [RpcMethod]
-        protected virtual JObject ListDebugSnapshots(JArray _params)
-        {
-            JArray session = new JArray();
-            foreach (string s in debugSessionToEngine.Keys)
-            {
-                session.Add(s);
-            }
-            return session;
-        }
-
-        [RpcMethod]
-        protected virtual JObject DeleteDebugSnapshots(JArray _params)
-        {
-            JObject json = new();
-            foreach (var s in _params)
-            {
-                string session = s.AsString();
-                json[session] = debugSessionToEngine.Remove(session, out _);
-            }
-            return json;
         }
 
         private ApplicationEngine DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = ApplicationEngine.TestModeGas, Diagnostic diagnostic = null)
