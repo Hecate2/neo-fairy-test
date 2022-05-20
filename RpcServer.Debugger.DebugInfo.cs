@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -40,15 +41,39 @@ namespace Neo.Plugins
         }
         readonly DumpNefPatterns dumpNefPatterns = new();
 
+        public static string Unzip(byte[] zippedBuffer)
+        {
+            using (var zippedStream = new MemoryStream(zippedBuffer))
+            {
+                using (var archive = new ZipArchive(zippedStream))
+                {
+                    var entry = archive.Entries.FirstOrDefault();
+                    if (entry != null)
+                    {
+                        using (var unzippedEntryStream = entry.Open())
+                        {
+                            using (var ms = new MemoryStream())
+                            {
+                                unzippedEntryStream.CopyTo(ms);
+                                var unzippedArray = ms.ToArray();
+                                return Encoding.Default.GetString(unzippedArray);
+                            }
+                        }
+                    }
+                    throw new ArgumentException("No file found in zip archive");
+                }
+            }
+        }
+
         [RpcMethod]
         protected virtual JObject SetDebugInfo(JArray _params)
         {
             string param0 = _params[0].AsString();
             UInt160 scriptHash = UInt160.Parse(param0);
             // nccs YourContractProject.csproj --debug
-            // find .nefdbgnfo beside your .nef contract, and open .nefdbgnfo as a zip file
-            // give me the content of the only .debug.json file in the zip
-            JObject nefDbgNfo = JObject.Parse(_params[1].AsString());
+            // find .nefdbgnfo beside your .nef contract, and
+            // give me the base64encode(content) of .nefdbgnfo file
+            JObject nefDbgNfo = JObject.Parse(Unzip(Convert.FromBase64String(_params[1].AsString())));
             contractScriptHashToNefDbgNfo[scriptHash] = nefDbgNfo;
             // https://github.com/devhawk/DumpNef
             // dumpnef contract.nef > contract.nef.txt
