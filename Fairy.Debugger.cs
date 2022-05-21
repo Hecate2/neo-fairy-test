@@ -46,12 +46,13 @@ namespace Neo.Plugins
             ulong timestamp;
             if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
                 sessionToTimestamp[session] = 0;
-            ApplicationEngine oldEngine, newEngine;
+            ApplicationDebugger newEngine;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             BreakReason breakReason = BreakReason.None;
             if (timestamp == 0)
             {
+                ApplicationEngine oldEngine;
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
                 {
                     newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
@@ -63,10 +64,10 @@ namespace Neo.Plugins
             }
             else
             {
-                oldEngine = debugSessionToEngine[session];
+                ApplicationDebugger oldEngine = debugSessionToEngine[session];
                 newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             if (writeSnapshot)
                 debugSessionToEngine[session] = newEngine;
             return DumpDebugResultJson(newEngine, breakReason);
@@ -76,16 +77,16 @@ namespace Neo.Plugins
         protected virtual JObject DebugContinue(JArray _params)
         {
             string session = _params[0].AsString();
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             Execute(newEngine, out breakReason);
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private JObject DumpDebugResultJson(JObject json, ApplicationEngine newEngine, BreakReason breakReason)
+        private JObject DumpDebugResultJson(JObject json, ApplicationDebugger newEngine, BreakReason breakReason)
         {
             json["state"] = newEngine.State;
             json["breakreason"] = breakReason;
@@ -135,20 +136,20 @@ namespace Neo.Plugins
             return json;
         }
 
-        private JObject DumpDebugResultJson(ApplicationEngine newEngine, BreakReason breakReason)
+        private JObject DumpDebugResultJson(ApplicationDebugger newEngine, BreakReason breakReason)
         {
             return DumpDebugResultJson(new JObject(), newEngine, breakReason);
         }
 
-        private ApplicationEngine DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = ApplicationEngine.TestModeGas, Diagnostic diagnostic = null)
+        private ApplicationDebugger DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = ApplicationDebugger.TestModeGas, Diagnostic diagnostic = null)
         {
             persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: 0);
-            ApplicationEngine engine = ApplicationEngine.Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic);
+            ApplicationDebugger engine = ApplicationDebugger.Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic);
             engine.LoadScript(script, initialPosition: offset);
             return Execute(engine, out breakReason);
         }
 
-        private ApplicationEngine ExecuteAndCheck(ApplicationEngine engine, out BreakReason actualBreakReason,
+        private ApplicationDebugger ExecuteAndCheck(ApplicationDebugger engine, out BreakReason actualBreakReason,
             BreakReason requiredBreakReason = BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint)
         {
             actualBreakReason = BreakReason.None;
@@ -216,7 +217,7 @@ namespace Neo.Plugins
             return engine;
         }
 
-        private ApplicationEngine Execute(ApplicationEngine engine, out BreakReason breakReason)
+        private ApplicationDebugger Execute(ApplicationDebugger engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
@@ -226,7 +227,7 @@ namespace Neo.Plugins
             return engine;
         }
 
-        private ApplicationEngine StepInto(ApplicationEngine engine, out BreakReason breakReason)
+        private ApplicationDebugger StepInto(ApplicationDebugger engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
@@ -240,16 +241,16 @@ namespace Neo.Plugins
         protected virtual JObject DebugStepInto(JArray _params)
         {
             string session = _params[0].AsString();
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             StepInto(newEngine, out breakReason);
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private ApplicationEngine StepOut(ApplicationEngine engine, out BreakReason breakReason)
+        private ApplicationDebugger StepOut(ApplicationDebugger engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
@@ -263,16 +264,16 @@ namespace Neo.Plugins
         protected virtual JObject DebugStepOut(JArray _params)
         {
             string session = _params[0].AsString();
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             StepOut(newEngine, out breakReason);
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private ApplicationEngine StepOverSourceCode(ApplicationEngine engine, out BreakReason breakReason)
+        private ApplicationDebugger StepOverSourceCode(ApplicationDebugger engine, out BreakReason breakReason)
         {
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
@@ -297,12 +298,12 @@ namespace Neo.Plugins
         protected virtual JObject DebugStepOverSourceCode(JArray _params)
         {
             string session = _params[0].AsString();
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             StepOverSourceCode(newEngine, out breakReason);
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
@@ -310,12 +311,12 @@ namespace Neo.Plugins
         protected virtual JObject DebugStepOverAssembly(JArray _params)
         {
             string session = _params[0].AsString();
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            ApplicationDebugger.Log += CacheLog;
             ExecuteAndCheck(newEngine, out breakReason);
-            ApplicationEngine.Log -= CacheLog;
+            ApplicationDebugger.Log -= CacheLog;
             return DumpDebugResultJson(newEngine, BreakReason.None);
         }
 
@@ -330,7 +331,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).LocalVariables.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
@@ -339,7 +340,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).Arguments.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
@@ -348,7 +349,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).StaticFields.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
@@ -357,7 +358,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).EvaluationStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
@@ -366,7 +367,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).InstructionPointer);
         }
 
@@ -384,7 +385,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            ApplicationEngine newEngine = debugSessionToEngine[session];
+            ApplicationDebugger newEngine = debugSessionToEngine[session];
             ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
             UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
             int instructionPointer = invocationStackItem.InstructionPointer;

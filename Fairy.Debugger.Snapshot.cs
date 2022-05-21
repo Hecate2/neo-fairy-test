@@ -7,7 +7,7 @@ namespace Neo.Plugins
 {
     public partial class RpcServer
     {
-        readonly ConcurrentDictionary<string, ApplicationEngine> debugSessionToEngine = new();
+        readonly ConcurrentDictionary<string, ApplicationDebugger> debugSessionToEngine = new();
 
         [RpcMethod]
         protected virtual JObject ListDebugSnapshots(JArray _params)
