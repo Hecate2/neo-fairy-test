@@ -91,7 +91,7 @@ namespace Neo.Plugins
             json["state"] = newEngine.State;
             json["breakreason"] = breakReason;
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
-            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash).Manifest.Name : null;
+            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
             try
             {
