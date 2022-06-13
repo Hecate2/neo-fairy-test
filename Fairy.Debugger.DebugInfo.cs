@@ -1,17 +1,13 @@
 using Neo.IO.Json;
 using Neo.VM;
-using System;
-using System.IO;
 using System.IO.Compression;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         public struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum;}
         readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();

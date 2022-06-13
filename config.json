@@ -1,0 +1,21 @@
+{
+  "PluginConfiguration": {
+    "Servers": [
+      {
+        "Network": 860833102,
+        "BindAddress": "0.0.0.0",
+        "Port": 16868,
+        "SslCert": "",
+        "SslCertPassword": "",
+        "TrustedAuthorities": [],
+        "RpcUser": "",
+        "RpcPass": "",
+        "MaxGasInvoke": 200,
+        "MaxFee": 0.1,
+        "MaxConcurrentConnections": 40,
+        "MaxIteratorResultItems": 100,
+        "DisabledMethods": []
+      }
+    ]
+  }
+}

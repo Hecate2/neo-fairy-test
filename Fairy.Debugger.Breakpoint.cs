@@ -1,12 +1,9 @@
 using Neo.IO.Json;
-using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         readonly ConcurrentDictionary<UInt160, HashSet<uint>> contractScriptHashToAssemblyBreakpoints = new();
         readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
@@ -19,7 +16,7 @@ namespace Neo.Plugins
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
-            HashSet<uint> assemblyBreakpoints;
+            HashSet<uint>? assemblyBreakpoints;
             if (!contractScriptHashToAssemblyBreakpoints.TryGetValue(scriptHash, out assemblyBreakpoints))
             {
                 assemblyBreakpoints = new HashSet<uint>();
@@ -96,7 +93,7 @@ namespace Neo.Plugins
             {
                 throw new ArgumentException("Scripthash not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
-            HashSet<SourceFilenameAndLineNum> sourceCodeBreakpoints;
+            HashSet<SourceFilenameAndLineNum>? sourceCodeBreakpoints;
             if (!contractScriptHashToSourceCodeBreakpoints.TryGetValue(scriptHash, out sourceCodeBreakpoints))
             {
                 sourceCodeBreakpoints = new HashSet<SourceFilenameAndLineNum>();

@@ -6,16 +6,12 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.SmartContract.Manifest;
 using Neo.VM;
-using System;
-using System.IO;
 using System.Numerics;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         readonly ConcurrentQueue<LogEventArgs> logs = new();
 
@@ -55,14 +51,10 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject VirtualDeploy(JArray _params)
         {
-            if (wallet == null)
+            if (fairyWallet == null)
                 throw new Exception("Please open a wallet before deploying a contract.");
             string session = _params[0].AsString();
-            NefFile nef;
-            using (var stream = new BinaryReader(new MemoryStream(Convert.FromBase64String(_params[1].AsString())), Neo.Utility.StrictUTF8, false))
-            {
-                nef = stream.ReadSerializable<NefFile>();
-            }
+            NefFile nef = Convert.FromBase64String(_params[1].AsString()).AsSerializable<NefFile>();
             ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
             ApplicationEngine oldEngine = sessionToEngine.GetValueOrDefault(session, BuildSnapshotWithDummyScript());
             DataCache snapshot = oldEngine.Snapshot;
@@ -75,13 +67,17 @@ namespace Neo.Plugins
             JObject json = new();
             try
             {
-                Transaction tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), script);
+                Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script);
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
                 sessionToEngine[session] = ApplicationEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToTimestamp.GetValueOrDefault(session, (ulong)0)), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
             {
+                if (ex.InnerException == null)
+                {
+                    throw ex;
+                }
                 if (ex.InnerException.Message.StartsWith("Contract Already Exists: "))
                 {
                     json[session] = ex.InnerException.Message[^42..];
@@ -140,7 +136,7 @@ namespace Neo.Plugins
             ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             JObject json = new();
             StorageItem item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
-            json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value);
+            json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value.ToArray());
             return json;
         }
 
@@ -248,7 +244,7 @@ namespace Neo.Plugins
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
         {
-            Transaction tx = signers == null ? null : new Transaction
+            Transaction? tx = signers == null ? null : new Transaction
             {
                 Signers = signers.GetSigners(),
                 Attributes = System.Array.Empty<TransactionAttribute>(),
@@ -294,7 +290,7 @@ namespace Neo.Plugins
             {
                 string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
-                foreach (ExecutionContext context in newEngine.InvocationStack)
+                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
                     traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
                 }
@@ -326,30 +322,30 @@ namespace Neo.Plugins
 
         private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signers signers = null, Block block = null)
         {
-            if (wallet == null || signers == null) return;
+            if (fairyWallet == null || signers == null) return;
 
             Signer[] witnessSigners = signers.GetSigners().ToArray();
-            UInt160 sender = signers.Size > 0 ? signers.GetSigners()[0].Account : null;
+            UInt160? sender = signers.Size > 0 ? signers.GetSigners()[0].Account : null;
             if (witnessSigners.Length <= 0) return;
 
             Transaction tx;
             try
             {
-                tx = wallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
+                tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
             }
             catch //(Exception e)
             {
                 // result["exception"] = GetExceptionMessage(e);
                 return;
             }
-            ContractParametersContext context = new(snapshot.CreateSnapshot(), tx, settings.Network);
-            wallet.Sign(context);
+            ContractParametersContext context = new(snapshot.CreateSnapshot(), tx, system.Settings.Network);
+            fairyWallet.Sign(context);
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
                 byte[] txBytes = tx.ToArray();
                 result["tx"] = Convert.ToBase64String(txBytes);
-                long networkfee = (wallet ?? new DummyWallet(system.Settings)).CalculateNetworkFee(system.StoreView, txBytes.AsSerializable<Transaction>());
+                long networkfee = (fairyWallet ?? new DummyWallet(system.Settings)).CalculateNetworkFee(system.StoreView, txBytes.AsSerializable<Transaction>());
                 result["networkfee"] = networkfee.ToString();
             }
             else

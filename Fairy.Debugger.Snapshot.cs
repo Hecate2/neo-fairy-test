@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         readonly ConcurrentDictionary<string, ApplicationDebugger> debugSessionToEngine = new();
 

@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
         readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();

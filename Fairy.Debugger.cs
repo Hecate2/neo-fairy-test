@@ -5,12 +5,10 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
-using System;
-using System.Linq;
 
 namespace Neo.Plugins
 {
-    public partial class RpcServer
+    public partial class Fairy
     {
         enum BreakReason
         {
@@ -30,14 +28,14 @@ namespace Neo.Plugins
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
             ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson(p)).ToArray() : System.Array.Empty<ContractParameter>();
-            Signers signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
+            Signers? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
             {
                 script = sb.EmitDynamicCall(script_hash, operation, args).ToArray();
             }
-            Transaction tx = signers == null ? null : new Transaction
+            Transaction? tx = signers == null ? null : new Transaction
             {
                 Signers = signers.GetSigners(),
                 Attributes = System.Array.Empty<TransactionAttribute>(),
@@ -52,7 +50,7 @@ namespace Neo.Plugins
             BreakReason breakReason = BreakReason.None;
             if (timestamp == 0)
             {
-                ApplicationEngine oldEngine;
+                ApplicationEngine? oldEngine;
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
                 {
                     newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
@@ -110,7 +108,7 @@ namespace Neo.Plugins
             {
                 string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
-                foreach (ExecutionContext context in newEngine.InvocationStack)
+                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
                     traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
                 }
@@ -141,7 +139,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(new JObject(), newEngine, breakReason);
         }
 
-        private ApplicationDebugger DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = ApplicationDebugger.TestModeGas, Diagnostic diagnostic = null)
+        private ApplicationDebugger DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = ApplicationDebugger.TestModeGas, IDiagnostic? diagnostic = null)
         {
             persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: 0);
             ApplicationDebugger engine = ApplicationDebugger.Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic);
@@ -386,7 +384,7 @@ namespace Neo.Plugins
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
             ApplicationDebugger newEngine = debugSessionToEngine[session];
-            ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
+            Neo.VM.ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
             UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
             int instructionPointer = invocationStackItem.InstructionPointer;
             JObject method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
@@ -415,5 +413,34 @@ namespace Neo.Plugins
             }
             return returnedJson;
         }
+        public class ApplicationDebugger : ApplicationEngine
+        {
+            protected ApplicationDebugger(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            {
+            }
+
+            public static new ApplicationDebugger Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null)
+            {
+                return new ApplicationDebugger(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic);
+            }
+
+            public new VMState State
+            {
+                get
+                {
+                    return base.State;
+                }
+                set
+                {
+                    base.State = value;
+                }
+            }
+
+            public new void ExecuteNext()
+            {
+                base.ExecuteNext();
+            }
+        }
+
     }
 }
