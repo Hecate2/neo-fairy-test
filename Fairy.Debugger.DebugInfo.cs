@@ -1,5 +1,6 @@
 using Neo.IO.Json;
 using Neo.VM;
+using Neo.SmartContract.Native;
 using System.IO.Compression;
 using System.Collections.Concurrent;
 using System.Text;
@@ -153,11 +154,19 @@ namespace Neo.Plugins
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             uint instrcutionPointer = uint.Parse(_params[1].AsString());
-            foreach (JObject method in (JArray)contractScriptHashToNefDbgNfo[scriptHash]["methods"])
+            try
             {
-                string[] rangeStr = method["range"].AsString().Split("-");
-                if (instrcutionPointer >= uint.Parse(rangeStr[0]) && instrcutionPointer <= uint.Parse(rangeStr[1]))
-                    return method;
+                foreach (JObject method in (JArray)contractScriptHashToNefDbgNfo[scriptHash]["methods"])
+                {
+                    string[] rangeStr = method["range"].AsString().Split("-");
+                    if (instrcutionPointer >= uint.Parse(rangeStr[0]) && instrcutionPointer <= uint.Parse(rangeStr[1]))
+                        return method;
+                }
+            }
+            catch (KeyNotFoundException ex)
+            {
+                string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
+                throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
             return JObject.Null;
         }
