@@ -223,11 +223,11 @@ namespace Neo.Plugins
                     NextConsensus = currentBlock.NextConsensus,
                     Witness = new Witness
                     {
-                        InvocationScript = Array.Empty<byte>(),
-                        VerificationScript = Array.Empty<byte>()
+                        InvocationScript = System.Array.Empty<byte>(),
+                        VerificationScript = System.Array.Empty<byte>()
                     },
                 },
-                Transactions = Array.Empty<Transaction>()
+                Transactions = System.Array.Empty<Transaction>()
             };
         }
 
@@ -281,7 +281,37 @@ namespace Neo.Plugins
             ApplicationEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionToEngine[session] = newEngine;
+
             JObject json = new();
+
+            for (int i = newEngine.Notifications.Count - 1; i >= 0; i--)
+            {
+                if(newEngine.Notifications[i].EventName == "OracleRequest")
+                {
+                    int oracleContractId = NativeContract.Oracle.Id;
+                    ulong requestId = (ulong)(new BigInteger(newEngine.Snapshot.TryGet(new StorageKey { Id=oracleContractId, Key=new byte[] { 9 } }).Value.ToArray()) - 1);
+                    OracleRequest oracleRequest = newEngine.Snapshot.TryGet(new KeyBuilder(oracleContractId, 7).AddBigEndian(requestId)).GetInteroperable<OracleRequest>();
+                    //if (!Uri.TryCreate(oracleRequest.Url, UriKind.Absolute, out var uri))
+                    //    break;
+                    //if (uri.Scheme != "https")
+                    //{
+                    //    Console.WriteLine($"WARNING: uri scheme {uri.Scheme} not supported by fairy.");
+                    //    break;
+                    //}
+                    JArray oracleRequests;
+                    if (!json.ContainsProperty("oraclerequests"))
+                    {
+                        oracleRequests = new JArray();
+                        json["oraclerequests"] = oracleRequests;
+                    }
+                    else
+                    {
+                        oracleRequests = (JArray)json["oraclerequests"];
+                    }
+                    oracleRequests.Add(oracleRequest.ToStackItem(new ReferenceCounter()).ToJson());
+                }
+            }
+
             json["script"] = Convert.ToBase64String(script);
             json["state"] = newEngine.State;
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
