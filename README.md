@@ -37,6 +37,8 @@ InstructionPointer=21390, OpCode RET, Script Length=21390
 [0x5c1068339fae89eb1a743909d0213e1d99dc5dc9] AnyUpdateShortSafe: No enough token to lend
 ```
 
+`Fairy.Debugger` relies on `Fairy.Tester`. `Fairy.Coverage` relies on `Fairy.Debugger`.
+
 Non official client: https://github.com/Hecate2/neo-test-client
 
 Instructions for running neo-cli and RpcServer from full source codes for debugging: https://github.com/Hecate2/how-to-debug-neo

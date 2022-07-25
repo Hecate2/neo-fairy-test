@@ -172,11 +172,14 @@ namespace Neo.Plugins
                 actualBreakReason |= BreakReason.Return;
                 return engine;
             }
+            uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
             engine.ExecuteNext();
+            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(engine.CurrentScriptHash) && contractScriptHashToInstructionPointerToCoverage[engine.CurrentScriptHash].ContainsKey(currentInstructionPointer))
+                contractScriptHashToInstructionPointerToCoverage[engine.CurrentScriptHash][currentInstructionPointer] = true;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
                 return engine;
             UInt160 currentScriptHash = engine.CurrentScriptHash;
-            uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
+            currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
             if ((requiredBreakReason & BreakReason.AssemblyBreakpoint) > 0)
             {
                 if (contractScriptHashToAssemblyBreakpoints.ContainsKey(currentScriptHash)

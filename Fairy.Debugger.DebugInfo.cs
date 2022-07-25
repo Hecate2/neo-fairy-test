@@ -15,6 +15,7 @@ namespace Neo.Plugins
         readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
         readonly ConcurrentDictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
         readonly ConcurrentDictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
+        readonly ConcurrentDictionary<UInt160, Dictionary<uint, bool>> contractScriptHashToInstructionPointerToCoverage = new();
         readonly ConcurrentDictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
         struct DumpNefPatterns
         {
@@ -63,6 +64,8 @@ namespace Neo.Plugins
             contractScriptHashToInstructionPointerToSourceLineNum[scriptHash] = InstructionPointerToSourceLineNum;
             Dictionary<uint, OpCode> instructionPointerToOpCode = new();
             contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
+            Dictionary<uint, bool> instructionPointerToCoverage = new();
+            contractScriptHashToInstructionPointerToCoverage[scriptHash] = instructionPointerToCoverage;
             HashSet<string> filenames = new();
             contractScriptHashToSourceLineFilenames[scriptHash] = filenames;
 
@@ -97,6 +100,7 @@ namespace Neo.Plugins
                     uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                     string[] opcodeAndOperand = opcodeGroups[2].ToString().Split();
                     instructionPointerToOpCode[instructionPointer] = (OpCode)Enum.Parse(typeof(OpCode), opcodeAndOperand[0]);
+                    instructionPointerToCoverage[instructionPointer] = false;
                     continue;
                 }
             }
@@ -139,9 +143,13 @@ namespace Neo.Plugins
             {
                 string str = s.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
+                contractScriptHashToSourceLineNums.Remove(scriptHash, out _);
                 contractScriptHashToInstructionPointerToSourceLineNum.Remove(scriptHash, out _);
-                contractScriptHashToNefDbgNfo.Remove(scriptHash, out _);
                 contractScriptHashToSourceLineFilenames.Remove(scriptHash, out _);
+                contractScriptHashToInstructionPointerToOpCode.Remove(scriptHash, out _);
+                contractScriptHashToInstructionPointerToCoverage.Remove(scriptHash, out _);
+                contractScriptHashToNefDbgNfo.Remove(scriptHash, out _);
+
                 contractScriptHashToAssemblyBreakpoints.Remove(scriptHash, out _);
                 contractScriptHashToSourceCodeBreakpoints.Remove(scriptHash, out _);
                 json[str] = true;
