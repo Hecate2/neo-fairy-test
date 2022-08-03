@@ -1,13 +1,11 @@
 using Neo.IO.Json;
-using Neo.SmartContract;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        readonly ConcurrentDictionary<string, ApplicationDebugger> debugSessionToEngine = new();
+        public readonly ConcurrentDictionary<string, ApplicationDebugger> debugSessionToEngine = new();
 
         [RpcMethod]
         protected virtual JObject ListDebugSnapshots(JArray _params)

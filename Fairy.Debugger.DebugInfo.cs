@@ -11,12 +11,12 @@ namespace Neo.Plugins
     public partial class Fairy
     {
         public struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum;}
-        readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
-        readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
-        readonly ConcurrentDictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
-        readonly ConcurrentDictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
-        readonly ConcurrentDictionary<UInt160, Dictionary<uint, bool>> contractScriptHashToInstructionPointerToCoverage = new();
-        readonly ConcurrentDictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
+        public readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
+        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
+        public readonly ConcurrentDictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
+        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
+        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, bool>> contractScriptHashToInstructionPointerToCoverage = new();
+        public readonly ConcurrentDictionary<UInt160, JObject> contractScriptHashToNefDbgNfo = new();
         struct DumpNefPatterns
         {
             public Regex opCodeRegex = new Regex(@"^(\d+)\s(.*?)\s?(#\s.*)?$");  // 8039 SYSCALL 62-7D-5B-52 # System.Contract.Call SysCall
@@ -73,7 +73,7 @@ namespace Neo.Plugins
             for (lineNum = 0; lineNum < lines.Length; ++lineNum)
             {
                 // foreach (var field in typeof(DumpNefPatterns).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
-                //     Console.WriteLine($"{field.Name}: {field.GetValue(dumpNefPatterns)}");
+                //     ConsoleHelper.Info($"{field.Name}: {field.GetValue(dumpNefPatterns)}");
                 Match match;
                 match = dumpNefPatterns.sourceCodeRegex.Match(lines[lineNum]);
                 if (match.Success)

@@ -39,6 +39,8 @@ InstructionPointer=21390, OpCode RET, Script Length=21390
 
 `Fairy.Debugger` relies on `Fairy.Tester`. `Fairy.Coverage` relies on `Fairy.Debugger`.
 
+Try the command `fairy` in `neo-cli`!
+
 Non official client: https://github.com/Hecate2/neo-test-client
 
 Instructions for running neo-cli and RpcServer from full source codes for debugging: https://github.com/Hecate2/how-to-debug-neo

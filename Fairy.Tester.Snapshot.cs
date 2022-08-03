@@ -1,24 +1,13 @@
-using Neo.IO;
 using Neo.IO.Json;
-using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.SmartContract;
-using Neo.SmartContract.Native;
-using Neo.SmartContract.Manifest;
-using Neo.VM;
-using System;
-using System.IO;
-using System.Numerics;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 
 namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
-        readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
+        public readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
+        public readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
 
         [RpcMethod]
         protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)

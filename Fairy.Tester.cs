@@ -135,7 +135,7 @@ namespace Neo.Plugins
                     //    break;
                     //if (uri.Scheme != "https")
                     //{
-                    //    Console.WriteLine($"WARNING: uri scheme {uri.Scheme} not supported by fairy.");
+                    //    ConsoleHelper.Info($"WARNING: uri scheme {uri.Scheme} not supported by fairy.");
                     //    break;
                     //}
                     JArray oracleRequests;
