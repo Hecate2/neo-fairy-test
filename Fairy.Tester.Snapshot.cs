@@ -1,12 +1,23 @@
 using Neo.IO.Json;
 using System.Collections.Concurrent;
+using System.Numerics;
 
 namespace Neo.Plugins
 {
     public partial class Fairy
     {
         public readonly ConcurrentDictionary<string, FairyEngine> sessionToEngine = new();
-        public readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
+        public struct RuntimeArgs
+        {
+            public ulong timestamp = 0;
+            // public BigInteger? designatedRandom = null;
+
+            public new string ToString()
+            {
+                return $"timestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
+            }
+        }
+        public readonly ConcurrentDictionary<string, RuntimeArgs> sessionToRuntimeArgs = new();
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
@@ -25,7 +36,7 @@ namespace Neo.Plugins
                 else
                     json[session] = false;
                 sessionToEngine[session] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
-                sessionToTimestamp[session] = 0;
+                sessionToRuntimeArgs[session] = new();
             }
             return json;
         }
@@ -37,7 +48,7 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string str = s.AsString();
-                json[str] = sessionToEngine.Remove(str, out var _) ? sessionToTimestamp.Remove(str, out var _) : false;
+                json[str] = sessionToEngine.Remove(str, out var _) ? sessionToRuntimeArgs.Remove(str, out var _) : false;
             }
             return json;
         }
@@ -60,8 +71,8 @@ namespace Neo.Plugins
             string to = _params[1].AsString();
             sessionToEngine[to] = sessionToEngine[from];
             sessionToEngine.Remove(from, out var _);
-            sessionToTimestamp[to] = sessionToTimestamp[from];
-            sessionToTimestamp.Remove(from, out var _);
+            sessionToRuntimeArgs[to] = sessionToRuntimeArgs[from];
+            sessionToRuntimeArgs.Remove(from, out var _);
             JObject json = new();
             json[to] = from;
             return json;
@@ -73,7 +84,7 @@ namespace Neo.Plugins
             string from = _params[0].AsString();
             string to = _params[1].AsString();
             sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
-            sessionToTimestamp[to] = sessionToTimestamp[from];
+            sessionToRuntimeArgs[to] = sessionToRuntimeArgs[from];
             JObject json = new();
             json[to] = from;
             return json;
@@ -84,7 +95,9 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             ulong timestamp = ulong.Parse(_params[1].AsString());
-            sessionToTimestamp[session] = timestamp;
+            RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
+            runtimeArgs.timestamp = timestamp;
+            sessionToRuntimeArgs[session] = runtimeArgs;
             JObject json = new();
             json[session] = timestamp;
             return json;
@@ -97,9 +110,47 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string session = s.AsString();
-                json[session] = sessionToTimestamp.GetValueOrDefault(session, (ulong)0);
+                json[session] = sessionToRuntimeArgs.GetValueOrDefault(session, new RuntimeArgs()).timestamp;
             }
             return json;
         }
+
+        //[RpcMethod]
+        //protected virtual JObject SetSnapshotRandom(JArray _params)
+        //{
+        //    string session = _params[0].AsString();
+        //    string? designatedRandomString = _params[1]?.AsString();
+        //    if (designatedRandomString == null)
+        //    {
+        //        RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
+        //        runtimeArgs.designatedRandom = null;
+        //        sessionToRuntimeArgs[session] = runtimeArgs;
+        //    }
+        //    else
+        //    {
+        //        BigInteger designatedRandom = BigInteger.Parse(designatedRandomString);
+        //        RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
+        //        runtimeArgs.designatedRandom = designatedRandom;
+        //        sessionToRuntimeArgs[session] = runtimeArgs;
+        //    }
+        //    JObject json = new();
+        //    json[session] = designatedRandomString;
+        //    return json;
+        //}
+
+        //[RpcMethod]
+        //protected virtual JObject GetSnapshotRandom(JArray _params)
+        //{
+        //    JObject json = new();
+        //    foreach (var s in _params)
+        //    {
+        //        string session = s.AsString();
+        //        if (sessionToRuntimeArgs.ContainsKey(session))
+        //            json[session] = sessionToRuntimeArgs[session].designatedRandom.ToString();
+        //        else
+        //            json[session] = null;
+        //    }
+        //    return json;
+        //}
     }
 }

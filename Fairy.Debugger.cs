@@ -41,14 +41,14 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = signers.Witnesses,
             };
-            ulong timestamp;
-            if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
-                sessionToTimestamp[session] = 0;
+            RuntimeArgs runtimeArgs;
+            if (!sessionToRuntimeArgs.TryGetValue(session, out runtimeArgs))  // we allow initializing a new session when executing
+                sessionToRuntimeArgs[session] = new RuntimeArgs();
             FairyEngine newEngine;
             logs.Clear();
             FairyEngine.Log += CacheLog;
             BreakReason breakReason = BreakReason.None;
-            if (timestamp == 0)
+            if (runtimeArgs.timestamp == 0)
             {
                 FairyEngine? oldEngine;
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
@@ -63,7 +63,7 @@ namespace Neo.Plugins
             else
             {
                 FairyEngine oldEngine = debugSessionToEngine[session];
-                newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                newEngine = DebugRun(script, oldEngine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: runtimeArgs.timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
             FairyEngine.Log -= CacheLog;
             if (writeSnapshot)

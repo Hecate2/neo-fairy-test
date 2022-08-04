@@ -3,6 +3,7 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using System.Numerics;
 
 namespace Neo.Plugins
 {
@@ -10,9 +11,7 @@ namespace Neo.Plugins
     {
         public class FairyEngine : ApplicationEngine
         {
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
-            {
-            }
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic){}
 
             public static new FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null)
             {

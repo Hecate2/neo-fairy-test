@@ -60,15 +60,15 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = signers.Witnesses,
             };
-            ulong timestamp;
-            if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
-                sessionToTimestamp[session] = 0;
+            RuntimeArgs runtimeArgs;
+            if (!sessionToRuntimeArgs.TryGetValue(session, out runtimeArgs))  // we allow initializing a new session when executing
+                sessionToRuntimeArgs[session] = new RuntimeArgs();
             FairyEngine oldEngine, newEngine;
             DataCache validSnapshotBase;
             Block block = null;
             logs.Clear();
             FairyEngine.Log += CacheLog;
-            if (timestamp == 0)
+            if (runtimeArgs.timestamp == 0)
             {
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
                 {
@@ -85,7 +85,7 @@ namespace Neo.Plugins
             {
                 oldEngine = sessionToEngine[session];
                 validSnapshotBase = oldEngine.Snapshot;
-                block = CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp);
+                block = CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: runtimeArgs.timestamp);
                 newEngine = FairyEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
             FairyEngine.Log -= CacheLog;
@@ -140,7 +140,7 @@ namespace Neo.Plugins
                 }
                 foreach (LogEventArgs log in logs)
                 {
-                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash).Manifest.Name;
+                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash)?.Manifest.Name;
                     traceback += $"\r\n[{log.ScriptHash}] {contractName}: {log.Message}";
                 }
                 json["traceback"] = traceback;

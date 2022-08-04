@@ -36,7 +36,7 @@ namespace Neo.Plugins
             {
                 Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script);
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionToEngine[session] = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToTimestamp.GetValueOrDefault(session, (ulong)0)), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToRuntimeArgs.GetValueOrDefault(session, new RuntimeArgs()).timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
