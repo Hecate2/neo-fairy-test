@@ -23,7 +23,7 @@ namespace Neo.Plugins
             string session = _params[0].AsString();
             NefFile nef = Convert.FromBase64String(_params[1].AsString()).AsSerializable<NefFile>();
             ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
-            ApplicationEngine oldEngine = sessionToEngine.GetValueOrDefault(session, BuildSnapshotWithDummyScript());
+            FairyEngine oldEngine = sessionToEngine.GetValueOrDefault(session, BuildSnapshotWithDummyScript());
             DataCache snapshot = oldEngine.Snapshot;
             byte[] script;
             using (ScriptBuilder sb = new ScriptBuilder())
@@ -36,7 +36,7 @@ namespace Neo.Plugins
             {
                 Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script);
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionToEngine[session] = ApplicationEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToTimestamp.GetValueOrDefault(session, (ulong)0)), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToTimestamp.GetValueOrDefault(session, (ulong)0)), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
@@ -75,7 +75,7 @@ namespace Neo.Plugins
                 value = Convert.FromBase64String(valueBase64);
             }
 
-            ApplicationEngine oldEngine = sessionToEngine[session];
+            FairyEngine oldEngine = sessionToEngine[session];
             ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             if (value.Length == 0)
             {
@@ -99,7 +99,7 @@ namespace Neo.Plugins
             string keyBase64 = _params[2].AsString();
             byte[] key = Convert.FromBase64String(keyBase64);
 
-            ApplicationEngine oldEngine = sessionToEngine[session];
+            FairyEngine oldEngine = sessionToEngine[session];
             ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             JObject json = new();
             StorageItem item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
@@ -139,7 +139,7 @@ namespace Neo.Plugins
         private JObject SetTokenBalance(string session, UInt160 contract, UInt160 account, ulong balance, byte prefixAccount)
         {
             byte[] balanceBytes = BitConverter.GetBytes(balance);
-            ApplicationEngine oldEngine = sessionToEngine[session];
+            FairyEngine oldEngine = sessionToEngine[session];
             ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             JObject json = new();
             if (contract == gasScriptHash)
@@ -229,7 +229,7 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = signers.Witnesses,
             };
-            using ApplicationEngine engine = ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+            using FairyEngine engine = FairyEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             JObject json = new();
             json["script"] = Convert.ToBase64String(script);
             json["state"] = engine.State;

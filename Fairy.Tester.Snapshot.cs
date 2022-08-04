@@ -1,13 +1,17 @@
 using Neo.IO.Json;
-using Neo.SmartContract;
 using System.Collections.Concurrent;
 
 namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        public readonly ConcurrentDictionary<string, ApplicationEngine> sessionToEngine = new();
+        public readonly ConcurrentDictionary<string, FairyEngine> sessionToEngine = new();
         public readonly ConcurrentDictionary<string, ulong> sessionToTimestamp = new();
+
+        private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
+        {
+            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
+        }
 
         [RpcMethod]
         protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
@@ -20,7 +24,7 @@ namespace Neo.Plugins
                     json[session] = true;
                 else
                     json[session] = false;
-                sessionToEngine[session] = ApplicationEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
                 sessionToTimestamp[session] = 0;
             }
             return json;

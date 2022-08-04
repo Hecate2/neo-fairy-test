@@ -47,36 +47,6 @@ namespace Neo.Plugins
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers);
         }
 
-        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp=0)
-        {
-            UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
-            Block currentBlock = NativeContract.Ledger.GetBlock(snapshot, hash);
-            return new Block
-            {
-                Header = new Header
-                {
-                    Version = 0,
-                    PrevHash = hash,
-                    MerkleRoot = new UInt256(),
-                    Timestamp = timestamp == 0 ? currentBlock.Timestamp + settings.MillisecondsPerBlock : timestamp,
-                    Index = currentBlock.Index + 1,
-                    NextConsensus = currentBlock.NextConsensus,
-                    Witness = new Witness
-                    {
-                        InvocationScript = System.Array.Empty<byte>(),
-                        VerificationScript = System.Array.Empty<byte>()
-                    },
-                },
-                Transactions = System.Array.Empty<Transaction>()
-            };
-        }
-
-
-        private ApplicationEngine BuildSnapshotWithDummyScript(ApplicationEngine engine = null)
-        {
-            return ApplicationEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
-        }
-
         private void CacheLog(object sender, LogEventArgs logEventArgs)
         {
             logs.Enqueue(logEventArgs);
@@ -93,21 +63,21 @@ namespace Neo.Plugins
             ulong timestamp;
             if (!sessionToTimestamp.TryGetValue(session, out timestamp))  // we allow initializing a new session when executing
                 sessionToTimestamp[session] = 0;
-            ApplicationEngine oldEngine, newEngine;
+            FairyEngine oldEngine, newEngine;
             DataCache validSnapshotBase;
             Block block = null;
             logs.Clear();
-            ApplicationEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog;
             if (timestamp == 0)
             {
                 if (sessionToEngine.TryGetValue(session, out oldEngine))
                 {
-                    newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                    newEngine = FairyEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                     validSnapshotBase = oldEngine.Snapshot;
                 }
                 else
                 {
-                    newEngine = ApplicationEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                    newEngine = FairyEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                     validSnapshotBase = system.StoreView;
                 }
             }
@@ -116,9 +86,9 @@ namespace Neo.Plugins
                 oldEngine = sessionToEngine[session];
                 validSnapshotBase = oldEngine.Snapshot;
                 block = CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: timestamp);
-                newEngine = ApplicationEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                newEngine = FairyEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
             }
-            ApplicationEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionToEngine[session] = newEngine;
 

@@ -1,10 +1,5 @@
 using Neo;
 using Neo.IO.Json;
-using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
-using Neo.SmartContract.Native;
-using Neo.VM;
 
 namespace Neo.Plugins
 {

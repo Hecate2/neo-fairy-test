@@ -1,5 +1,6 @@
 using Neo.ConsoleService;
 
+
 namespace Neo.Plugins
 {
     public partial class Fairy : RpcServer
