@@ -1,4 +1,4 @@
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.SmartContract.Native;
 using System.Collections.Concurrent;
 
@@ -10,7 +10,7 @@ namespace Neo.Plugins
         readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
 
         [RpcMethod]
-        protected virtual JObject SetAssemblyBreakpoints(JArray _params)
+        protected virtual JToken SetAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
@@ -38,7 +38,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListAssemblyBreakpoints(JArray _params)
+        protected virtual JToken ListAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
@@ -57,7 +57,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DeleteAssemblyBreakpoints(JArray _params)
+        protected virtual JToken DeleteAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
@@ -90,7 +90,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject SetSourceCodeBreakpoints(JArray _params)
+        protected virtual JToken SetSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
@@ -130,7 +130,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListSourceCodeBreakpoints(JArray _params)
+        protected virtual JToken ListSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
@@ -151,7 +151,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DeleteSourceCodeBreakpoints(JArray _params)
+        protected virtual JToken DeleteSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))

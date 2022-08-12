@@ -1,5 +1,5 @@
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -26,7 +26,7 @@ namespace Neo.Plugins
             bool writeSnapshot = _params[1].AsBoolean();
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
-            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson(p)).ToArray() : System.Array.Empty<ContractParameter>();
+            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
             Signers signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
 
             byte[] script;
@@ -132,7 +132,7 @@ namespace Neo.Plugins
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
-                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
+                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
                 if(!logs.IsEmpty)
                 {

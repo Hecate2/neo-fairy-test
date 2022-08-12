@@ -7,8 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\neo-node\Neo.ConsoleService\Neo.ConsoleService.csproj" />
-    <ProjectReference Include="..\neo-modules\src\RpcServer\RpcServer.csproj" />
+    <ProjectReference Include="..\..\..\neo-node-mainnet\Neo.ConsoleService\Neo.ConsoleService.csproj" />
+    <ProjectReference Include="..\..\..\neo\src\Neo.Json\Neo.Json.csproj" />
+    <ProjectReference Include="..\RpcServer\RpcServer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

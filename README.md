@@ -45,3 +45,10 @@ Non official client: https://github.com/Hecate2/neo-test-client
 
 Instructions for running neo-cli and RpcServer from full source codes for debugging: https://github.com/Hecate2/how-to-debug-neo
 
+#### Building
+
+Consider cloning [neo-modules](https://github.com/neo-project/neo-modules) and building such a directory: `neo-modules/src/Fairy` and place everything in my repo into your `neo-modules/src/Fairy`. Build `Fairy.csproj`.
+
+Alternatively you can use `Fairy.sln` to build your own solution.
+
+You probably have to change the directories of dependencies in `Fairy.csproj`

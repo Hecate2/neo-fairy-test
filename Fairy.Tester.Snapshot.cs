@@ -1,4 +1,4 @@
-using Neo.IO.Json;
+using Neo.Json;
 using System.Collections.Concurrent;
 using System.Numerics;
 
@@ -25,7 +25,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject NewSnapshotsFromCurrentSystem(JArray _params)
+        protected virtual JToken NewSnapshotsFromCurrentSystem(JArray _params)
         {
             JObject json = new();
             foreach (var param in _params)
@@ -42,7 +42,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DeleteSnapshots(JArray _params)
+        protected virtual JToken DeleteSnapshots(JArray _params)
         {
             JObject json = new();
             foreach (var s in _params)
@@ -54,7 +54,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListSnapshots(JArray _params)
+        protected virtual JToken ListSnapshots(JArray _params)
         {
             JArray session = new JArray();
             foreach (string s in sessionToEngine.Keys)
@@ -65,7 +65,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject RenameSnapshot(JArray _params)
+        protected virtual JToken RenameSnapshot(JArray _params)
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
@@ -79,7 +79,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject CopySnapshot(JArray _params)
+        protected virtual JToken CopySnapshot(JArray _params)
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
@@ -91,7 +91,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject SetSnapshotTimestamp(JArray _params)
+        protected virtual JToken SetSnapshotTimestamp(JArray _params)
         {
             string session = _params[0].AsString();
             ulong timestamp = ulong.Parse(_params[1].AsString());
@@ -104,7 +104,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetSnapshotTimeStamp(JArray _params)
+        protected virtual JToken GetSnapshotTimeStamp(JArray _params)
         {
             JObject json = new();
             foreach (var s in _params)
@@ -116,7 +116,7 @@ namespace Neo.Plugins
         }
 
         //[RpcMethod]
-        //protected virtual JObject SetSnapshotRandom(JArray _params)
+        //protected virtual JToken SetSnapshotRandom(JArray _params)
         //{
         //    string session = _params[0].AsString();
         //    string? designatedRandomString = _params[1]?.AsString();
@@ -139,7 +139,7 @@ namespace Neo.Plugins
         //}
 
         //[RpcMethod]
-        //protected virtual JObject GetSnapshotRandom(JArray _params)
+        //protected virtual JToken GetSnapshotRandom(JArray _params)
         //{
         //    JObject json = new();
         //    foreach (var s in _params)

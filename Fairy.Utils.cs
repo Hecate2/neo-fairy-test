@@ -1,6 +1,6 @@
 using Neo.Cryptography.ECC;
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -34,9 +34,10 @@ namespace Neo.Plugins
             JObject json = new();
             try
             {
-                Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script);
+                Block dummyBlock = CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToRuntimeArgs.GetValueOrDefault(session, new RuntimeArgs()).timestamp);
+                Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script, persistingBlock: dummyBlock);
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionToEngine[session] = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: sessionToRuntimeArgs.GetValueOrDefault(session, new RuntimeArgs()).timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionToEngine[session] = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
@@ -51,7 +52,7 @@ namespace Neo.Plugins
                 }
                 else
                 {
-                    throw ex;
+                    throw ex.InnerException;
                 }
             }
             return json;

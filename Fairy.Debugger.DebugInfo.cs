@@ -1,4 +1,4 @@
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.VM;
 using Neo.SmartContract.Native;
 using System.IO.Compression;
@@ -43,14 +43,14 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject SetDebugInfo(JArray _params)
+        protected virtual JToken SetDebugInfo(JArray _params)
         {
             string param0 = _params[0].AsString();
             UInt160 scriptHash = UInt160.Parse(param0);
             // nccs YourContractProject.csproj --debug
             // find .nefdbgnfo beside your .nef contract, and
             // give me the base64encode(content) of .nefdbgnfo file
-            JObject nefDbgNfo = JObject.Parse(Unzip(Convert.FromBase64String(_params[1].AsString())));
+            JObject nefDbgNfo = (JObject)JObject.Parse(Unzip(Convert.FromBase64String(_params[1].AsString())));
             contractScriptHashToNefDbgNfo[scriptHash] = nefDbgNfo;
             // https://github.com/devhawk/DumpNef
             // dumpnef contract.nef > contract.nef.txt
@@ -110,7 +110,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListDebugInfo(JArray _params)
+        protected virtual JToken ListDebugInfo(JArray _params)
         {
             JArray scriptHashes = new JArray();
             foreach (UInt160 s in contractScriptHashToInstructionPointerToSourceLineNum.Keys)
@@ -121,7 +121,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject ListFilenamesOfContract(JArray _params)
+        protected virtual JToken ListFilenamesOfContract(JArray _params)
         {
             string scriptHashStr = _params[0].AsString();
             UInt160 scriptHash = UInt160.Parse(scriptHashStr);
@@ -136,7 +136,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DeleteDebugInfo(JArray _params)
+        protected virtual JToken DeleteDebugInfo(JArray _params)
         {
             JObject json = new();
             foreach (var s in _params)
@@ -158,7 +158,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetMethodByInstructionPointer(JArray _params)
+        protected virtual JToken GetMethodByInstructionPointer(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
             uint instrcutionPointer = uint.Parse(_params[1].AsString());

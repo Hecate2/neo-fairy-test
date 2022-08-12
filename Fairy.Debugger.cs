@@ -1,5 +1,5 @@
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -21,13 +21,13 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugFunctionWithSession(JArray _params)
+        protected virtual JToken DebugFunctionWithSession(JArray _params)
         {
             string session = _params[0].AsString();
             bool writeSnapshot = _params[1].AsBoolean();
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
-            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson(p)).ToArray() : System.Array.Empty<ContractParameter>();
+            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
             Signers? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
 
             byte[] script;
@@ -72,7 +72,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugContinue(JArray _params)
+        protected virtual JToken DebugContinue(JArray _params)
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = debugSessionToEngine[session];
@@ -110,7 +110,7 @@ namespace Neo.Plugins
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
-                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction.OpCode}, Script Length={context.Script.Length}";
+                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
                 if (!logs.IsEmpty)
                 {
@@ -239,7 +239,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepInto(JArray _params)
+        protected virtual JToken DebugStepInto(JArray _params)
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = debugSessionToEngine[session];
@@ -262,7 +262,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepOut(JArray _params)
+        protected virtual JToken DebugStepOut(JArray _params)
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = debugSessionToEngine[session];
@@ -296,7 +296,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepOverSourceCode(JArray _params)
+        protected virtual JToken DebugStepOverSourceCode(JArray _params)
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = debugSessionToEngine[session];
@@ -309,7 +309,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepOverAssembly(JArray _params)
+        protected virtual JToken DebugStepOverAssembly(JArray _params)
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = debugSessionToEngine[session];
@@ -322,13 +322,13 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject DebugStepOver(JArray _params)
+        protected virtual JToken DebugStepOver(JArray _params)
         {
             return DebugStepOverSourceCode(_params);
         }
 
         [RpcMethod]
-        protected virtual JObject GetLocalVariables(JArray _params)
+        protected virtual JToken GetLocalVariables(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -337,7 +337,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetArguments(JArray _params)
+        protected virtual JToken GetArguments(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -346,7 +346,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetStaticFields(JArray _params)
+        protected virtual JToken GetStaticFields(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -355,7 +355,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetEvaluationStack(JArray _params)
+        protected virtual JToken GetEvaluationStack(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -364,7 +364,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetInstructionPointer(JArray _params)
+        protected virtual JToken GetInstructionPointer(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -373,7 +373,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetVariableValueByName(JArray _params)
+        protected virtual JToken GetVariableValueByName(JArray _params)
         {
             string session = _params[0].AsString();
             string variableName = _params[1].AsString();
@@ -382,7 +382,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject GetVariableNamesAndValues(JArray _params)
+        protected virtual JToken GetVariableNamesAndValues(JArray _params)
         {
             string session = _params[0].AsString();
             int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
@@ -390,7 +390,7 @@ namespace Neo.Plugins
             Neo.VM.ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
             UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
             int instructionPointer = invocationStackItem.InstructionPointer;
-            JObject method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
+            JToken method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
             JObject returnedJson = new();
             JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"];
             foreach (JObject param in staticVariables)
@@ -401,13 +401,13 @@ namespace Neo.Plugins
             }
             if (method != JObject.Null)
             {
-                foreach (JObject param in (JArray)method["params"])
+                foreach (JToken param in (JArray)method["params"])
                 {
                     string[] nameTypeAndIndex = param.AsString().Split(',');
                     int index = int.Parse(nameTypeAndIndex[2]);
                     returnedJson[nameTypeAndIndex[0]] = invocationStackItem.Arguments[index].ToJson();
                 }
-                foreach (JObject param in (JArray)method["variables"])
+                foreach (JToken param in (JArray)method["variables"])
                 {
                     string[] nameTypeAndIndex = param.AsString().Split(',');
                     int index = int.Parse(nameTypeAndIndex[2]);

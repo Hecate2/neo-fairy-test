@@ -1,5 +1,5 @@
 using Neo;
-using Neo.IO.Json;
+using Neo.Json;
 
 namespace Neo.Plugins
 {

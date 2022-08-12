@@ -1,4 +1,4 @@
-using Neo.IO.Json;
+using Neo.Json;
 using System.Collections.Concurrent;
 
 namespace Neo.Plugins
@@ -8,7 +8,7 @@ namespace Neo.Plugins
         public readonly ConcurrentDictionary<string, FairyEngine> debugSessionToEngine = new();
 
         [RpcMethod]
-        protected virtual JObject ListDebugSnapshots(JArray _params)
+        protected virtual JToken ListDebugSnapshots(JArray _params)
         {
             JArray session = new JArray();
             foreach (string s in debugSessionToEngine.Keys)

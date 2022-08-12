@@ -1,5 +1,5 @@
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.Wallets;
@@ -33,7 +33,7 @@ namespace Neo.Plugins
         protected Wallet? fairyWallet = null;
 
         [RpcMethod]
-        protected virtual JObject OpenFairyWallet(JArray _params)
+        protected virtual JToken OpenFairyWallet(JArray _params)
         {
             string path = _params[0].AsString();
             string password = _params[1].AsString();
@@ -58,7 +58,7 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JObject CloseFairyWallet(JArray _params)
+        protected virtual JToken CloseFairyWallet(JArray _params)
         {
             fairyWallet = null;
             return true;
