@@ -14,7 +14,9 @@
         "MaxFee": 0.1,
         "MaxConcurrentConnections": 40,
         "MaxIteratorResultItems": 100,
-        "DisabledMethods": []
+        "DisabledMethods": [],
+        "SessionEnabled": true,
+        "SessionExpirationTime": 600
       }
     ]
   }
