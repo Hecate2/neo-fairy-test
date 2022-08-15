@@ -1,23 +1,34 @@
 using Neo.Json;
 using System.Collections.Concurrent;
-using System.Numerics;
 
 namespace Neo.Plugins
 {
+    public class FairySession
+    {
+        public Fairy.FairyEngine engine;
+        public Fairy.FairyEngine? debugEngine = null;
+        public ulong timestamp = 0;
+        // public BigInteger? designatedRandom = null;
+
+        public FairySession(Fairy fairy)
+        {
+            engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
+        }
+
+        public new string ToString()
+        {
+            return $"hasDebugEngine: {debugEngine != null}\ttimestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
+        }
+    }
+
     public partial class Fairy
     {
-        public readonly ConcurrentDictionary<string, FairyEngine> sessionToEngine = new();
-        public struct RuntimeArgs
-        {
-            public ulong timestamp = 0;
-            // public BigInteger? designatedRandom = null;
+        public readonly ConcurrentDictionary<string, FairySession> sessionStringToFairySession = new();
 
-            public new string ToString()
-            {
-                return $"timestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
-            }
+        public FairySession NewTestSession()
+        {
+            return new FairySession(this);
         }
-        public readonly ConcurrentDictionary<string, RuntimeArgs> sessionToRuntimeArgs = new();
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
@@ -31,12 +42,11 @@ namespace Neo.Plugins
             foreach (var param in _params)
             {
                 string session = param.AsString();
-                if (sessionToEngine.TryGetValue(session, out _))
+                if (sessionStringToFairySession.TryGetValue(session, out _))
                     json[session] = true;
                 else
                     json[session] = false;
-                sessionToEngine[session] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
-                sessionToRuntimeArgs[session] = new();
+                sessionStringToFairySession[session] = NewTestSession();
             }
             return json;
         }
@@ -48,7 +58,7 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string str = s.AsString();
-                json[str] = sessionToEngine.Remove(str, out var _) ? sessionToRuntimeArgs.Remove(str, out var _) : false;
+                json[str] = sessionStringToFairySession.Remove(str, out var _);
             }
             return json;
         }
@@ -57,7 +67,7 @@ namespace Neo.Plugins
         protected virtual JToken ListSnapshots(JArray _params)
         {
             JArray session = new JArray();
-            foreach (string s in sessionToEngine.Keys)
+            foreach (string s in sessionStringToFairySession.Keys)
             {
                 session.Add(s);
             }
@@ -69,10 +79,8 @@ namespace Neo.Plugins
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
-            sessionToEngine[to] = sessionToEngine[from];
-            sessionToEngine.Remove(from, out var _);
-            sessionToRuntimeArgs[to] = sessionToRuntimeArgs[from];
-            sessionToRuntimeArgs.Remove(from, out var _);
+            sessionStringToFairySession[to] = sessionStringToFairySession[from];
+            sessionStringToFairySession.Remove(from, out var _);
             JObject json = new();
             json[to] = from;
             return json;
@@ -83,8 +91,9 @@ namespace Neo.Plugins
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
-            sessionToEngine[to] = BuildSnapshotWithDummyScript(sessionToEngine[from]);
-            sessionToRuntimeArgs[to] = sessionToRuntimeArgs[from];
+            sessionStringToFairySession[to] = sessionStringToFairySession[from];
+            var testSessionTo = sessionStringToFairySession[to];
+            testSessionTo.engine = BuildSnapshotWithDummyScript(sessionStringToFairySession[from].engine);
             JObject json = new();
             json[to] = from;
             return json;
@@ -95,9 +104,9 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             ulong timestamp = ulong.Parse(_params[1].AsString());
-            RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
+            FairySession runtimeArgs = sessionStringToFairySession[session];
             runtimeArgs.timestamp = timestamp;
-            sessionToRuntimeArgs[session] = runtimeArgs;
+            sessionStringToFairySession[session] = runtimeArgs;
             JObject json = new();
             json[session] = timestamp;
             return json;
@@ -110,7 +119,7 @@ namespace Neo.Plugins
             foreach (var s in _params)
             {
                 string session = s.AsString();
-                json[session] = sessionToRuntimeArgs.GetValueOrDefault(session, new RuntimeArgs()).timestamp;
+                json[session] = sessionStringToFairySession[session].timestamp;
             }
             return json;
         }

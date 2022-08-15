@@ -5,8 +5,8 @@ namespace Neo.Plugins
 {
     public partial class Fairy : RpcServer
     {
-        NeoSystem system;
-        RpcServerSettings settings;
+        public NeoSystem system;
+        public RpcServerSettings settings;
 
         public Fairy(NeoSystem system, RpcServerSettings settings) : base(system, settings)
         {

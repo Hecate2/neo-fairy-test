@@ -40,38 +40,18 @@ namespace Neo.Plugins
         [ConsoleCommand("fairy", Category = "Fairy Commands", Description = "List Fairy snapshots")]
         private void OnFairyCommand()
         {
-            Fairy.RuntimeArgs runtimeArgs;
             ConsoleHelper.Info("Test snapshots:");
-            if (fairy.sessionToEngine.Keys.Count > 0)
+            if (fairy.sessionStringToFairySession.Keys.Count > 0)
             {
-                Console.WriteLine("session\t\t\tRuntimeArgs");
-                foreach (string k in fairy.sessionToEngine.Keys)
+                Console.WriteLine("session name:\t\t\t");
+                foreach (string k in fairy.sessionStringToFairySession.Keys)
                 {
-                    if (!fairy.sessionToRuntimeArgs.TryGetValue(k, out runtimeArgs))
-                        runtimeArgs = new Fairy.RuntimeArgs();
-                    ConsoleHelper.Info($"{k}\t\t\t{runtimeArgs.ToString()}");
+                    ConsoleHelper.Info($"{k}\t\t\t{fairy.sessionStringToFairySession[k].ToString()}");
                 }
             }
             else
             {
                 ConsoleHelper.Warning($"No test snapshot created!");
-            }
-            Console.WriteLine("------");
-
-            ConsoleHelper.Info("Debug snapshots:");
-            if (fairy.debugSessionToEngine.Keys.Count > 0)
-            {
-                Console.WriteLine("session\t\t\tRuntimeArgs");
-                foreach (string k in fairy.debugSessionToEngine.Keys)
-                {
-                    if (!fairy.sessionToRuntimeArgs.TryGetValue(k, out runtimeArgs))
-                        runtimeArgs = new Fairy.RuntimeArgs();
-                    ConsoleHelper.Info($"{k}\t\t\t{runtimeArgs.ToString()}");
-                }
-            }
-            else
-            {
-                ConsoleHelper.Warning($"No debug snapshot created!");
             }
             Console.WriteLine("------");
 
@@ -83,9 +63,9 @@ namespace Neo.Plugins
                 {
                     string? contractName = null;
                     string? testSession = null;
-                    foreach (string s in fairy.sessionToEngine.Keys)
+                    foreach (string s in fairy.sessionStringToFairySession.Keys)
                     {
-                        contractName = NativeContract.ContractManagement.GetContract(fairy.sessionToEngine[s].Snapshot, k)?.Manifest.Name;
+                        contractName = NativeContract.ContractManagement.GetContract(fairy.sessionStringToFairySession[s].engine.Snapshot, k)?.Manifest.Name;
                         if (contractName != null)
                         {
                             testSession = s;
