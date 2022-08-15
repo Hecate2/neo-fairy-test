@@ -66,26 +66,14 @@ namespace Neo.Plugins
             string keyBase64 = _params[2].AsString();
             byte[] key = Convert.FromBase64String(keyBase64);
             string valueBase64 = _params[3].AsString();
-            byte[] value;
-            if (valueBase64 == "")
-            {
-                value = new byte[0] { };
-            }
-            else
-            {
-                value = Convert.FromBase64String(valueBase64);
-            }
+            byte[] value = Convert.FromBase64String(valueBase64);
 
             FairyEngine oldEngine = sessionToEngine[session];
             ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
-            if (value.Length == 0)
-            {
-                oldEngine.Snapshot.Delete(new StorageKey { Id=contractState.Id, Key=key });
-            }
-            else
-            {
+            StorageKey storageKey = new StorageKey { Id=contractState.Id, Key=key };
+            oldEngine.Snapshot.Delete(storageKey);
+            if (value.Length > 0)
                 oldEngine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(value));
-            }
             oldEngine.Snapshot.Commit();
             JObject json = new();
             json[keyBase64] = valueBase64;
@@ -105,6 +93,22 @@ namespace Neo.Plugins
             JObject json = new();
             StorageItem item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
             json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value.ToArray());
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JObject FindStorageWithSession(JArray _params)
+        {
+            string session = _params[0].AsString();
+            UInt160 contract = UInt160.Parse(_params[1].AsString());
+            string keyBase64 = _params[2].AsString();
+            byte[] prefix = Convert.FromBase64String(keyBase64);
+
+            FairyEngine oldEngine = sessionToEngine[session];
+            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
+            JObject json = new();
+            foreach (var (key, value) in oldEngine.Snapshot.Find(StorageKey.CreateSearchPrefix(contractState.Id, prefix)))
+                json[Convert.ToBase64String(key.Key.ToArray())] = Convert.ToBase64String(value.ToArray());
             return json;
         }
 
