@@ -1,6 +1,6 @@
 **The last tool you need for repeatable, lighting fast, fully automatic smart contract testing!**
 
-`Fairy.csproj` builds an extended RpcServer plugin in your local neo-cli node. Through RPC calls, You can execute your own **fairy transactions** or deploy your own **fairy contracts**, with access to the environment of all other on-chain contracts, but without having to write your transactions onto the chain. The executions of your fairy transactions are saved in your snapshots in the memory of neo-cli. Access these snapshots with session strings defined by yourself. You can change the timestamp (the returned value of `Runtime.Time` called by smart contracts) at will. Happy testing on the mainnet!  
+`Fairy.csproj` builds an extended RpcServer plugin in your local neo-cli node. Through RPC calls, You can execute your own **fairy transactions** or deploy your own **fairy contracts**, with access to the environment of all other on-chain contracts, but without having to write your transactions onto the chain. The executions of your fairy transactions are saved in your snapshots in the memory of neo-cli. Access these snapshots with session strings defined by yourself. You can change the timestamp (the returned value of `Runtime.Time` called by smart contracts) at will. Happy testing **on the mainnet**!  
 
 No GAS fee is needed for your fairy transactions. This is a great help when your contract heavily manipulates GAS and you want to ensure correct GAS transferring. If you do need to compute the GAS system fee and network fee, just read `["networkfee"]` and `["gasconsumed"]` in the result of invoked fairy transactions. Network fee is calculated only when the correct wallet is opened and the transaction can be validly signed by the opened wallet.  
 
@@ -41,9 +41,11 @@ InstructionPointer=21390, OpCode RET, Script Length=21390
 
 Try the command `fairy` in `neo-cli`!
 
-Non official client: https://github.com/Hecate2/neo-test-client
+Non official client: https://github.com/Hecate2/neo-test-client . Watch the fully automatic and repeatable test cases in the repository if you do not know how to use Fairy. 
 
 Instructions for running neo-cli and RpcServer from full source codes for debugging: https://github.com/Hecate2/how-to-debug-neo
+
+[DumpNef](https://github.com/devhawk/DumpNef) is needed for debugging.
 
 #### Building
 
@@ -52,3 +54,13 @@ Consider cloning [neo-modules](https://github.com/neo-project/neo-modules) and b
 Alternatively you can use `Fairy.sln` to build your own solution.
 
 You probably have to change the directories of dependencies in `Fairy.csproj`
+
+#### Usage
+
+1. Please read the source codes for help. I have not written any docs.
+2. Through RPC, `SetGasBalance(session, account, balance)` to help yourself get 100_0000_0000 GAS. ([Fairy.Utils.cs](Fairy.Utils.cs)). Use any string as your session name. If the session name is not recognized by Fairy, a new snapshot from current blockchain state will be generated for your session. **Keep using the same session name for continuous executions.** 
+3. `VirtualDeploy` your contract. ([Fairy.Utils.cs](Fairy.Utils.cs))
+4. `InvokeFunctionWithSession`([Fairy.Tester.cs](Fairy.Tester.cs))
+5. If you want to debug a call, `SetDebugInfo`([Fairy.Debugger.DebugInfo.cs](Fairy.Debugger.DebugInfo.cs)) and `SetSourceCodeBreakpoints`([Fairy.Debugger.Breakpoint.cs](Fairy.Debugger.Breakpoint.cs)). Then run your debug session with `DebugFunctionWithSession(session, ...)`([Fairy.Debugger.cs](Fairy.Debugger.cs)). The runtime environment is inherited from the same session name constructed by `InvokeFunctionWithSession`. 
+6. The debugger shall break on breakpoints or exceptions. Use APIs in [Fairy.Debugger.cs](Fairy.Debugger.cs) for happy debugging!
+
