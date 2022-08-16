@@ -3,24 +3,6 @@ using System.Collections.Concurrent;
 
 namespace Neo.Plugins
 {
-    public class FairySession
-    {
-        public Fairy.FairyEngine engine;
-        public Fairy.FairyEngine? debugEngine = null;
-        public ulong timestamp = 0;
-        // public BigInteger? designatedRandom = null;
-
-        public FairySession(Fairy fairy)
-        {
-            engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
-        }
-
-        public new string ToString()
-        {
-            return $"hasDebugEngine: {debugEngine != null}\ttimestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
-        }
-    }
-
     public partial class Fairy
     {
         public readonly ConcurrentDictionary<string, FairySession> sessionStringToFairySession = new();

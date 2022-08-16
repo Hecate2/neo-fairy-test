@@ -16,7 +16,7 @@
         "MaxIteratorResultItems": 100,
         "DisabledMethods": [],
         "SessionEnabled": true,
-        "SessionExpirationTime": 600
+        "SessionExpirationTime": 86400
       }
     ]
   }

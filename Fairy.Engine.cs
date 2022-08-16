@@ -1,9 +1,9 @@
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
-using System.Numerics;
 
 namespace Neo.Plugins
 {
@@ -68,5 +68,77 @@ namespace Neo.Plugins
                 Transactions = System.Array.Empty<Transaction>()
             };
         }
+
+        public class FairySession
+        {
+            public DateTime StartTime;
+            public FairyEngine engine { get { ResetExpiration(); return _engine; } set { _engine = value; ResetExpiration(); } }
+            public FairyEngine _engine;
+            public FairyEngine? debugEngine { get { ResetExpiration(); return _debugEngine; } set { _debugEngine = value; ResetExpiration(); } }
+            public FairyEngine? _debugEngine = null;
+            public ulong timestamp { get { ResetExpiration(); return _timestamp; } set { timestamp = value; ResetExpiration(); } }
+            public ulong _timestamp = 0;
+            // public BigInteger? designatedRandom = null;
+
+            public FairySession(Fairy fairy)
+            {
+                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
+            }
+
+            public void ResetExpiration()
+            {
+                StartTime = DateTime.UtcNow;
+            }
+
+            public new string ToString()
+            {
+                return $"hasDebugEngine: {debugEngine != null}\ttimestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
+            }
+
+            public void Dispose()
+            {
+                engine?.Dispose();
+                debugEngine?.Dispose();
+            }
+        }
+
+        internal Timer timer;
+
+        internal void InitializeTimer()
+        {
+            if (settings.SessionEnabled)
+                timer = new(OnTimer, null, settings.SessionExpirationTime.Milliseconds, 60000);
+        }
+
+        internal void OnTimer(object state)
+        {
+            List<(string Id, FairySession Session)> toBeDestroyed = new();
+            foreach (var (id, session) in sessionStringToFairySession)
+                if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
+                    toBeDestroyed.Add((id, session));
+            Console.WriteLine(toBeDestroyed.Count);
+            foreach (var (id, _) in toBeDestroyed)
+                sessionStringToFairySession.Remove(id, out _);
+            foreach (var (_, session) in toBeDestroyed)
+                session.Dispose();
+
+            JArray debugInfoToBeDeleted = new();
+            foreach (UInt160 k in this.contractScriptHashToSourceLineFilenames.Keys)
+            {
+                string? contractName = null;
+                foreach (string s in this.sessionStringToFairySession.Keys)
+                {
+                    contractName = NativeContract.ContractManagement.GetContract(this.sessionStringToFairySession[s].engine.Snapshot, k)?.Manifest.Name;
+                    if (contractName != null)
+                        break;
+                }
+                if (contractName == null)
+                    debugInfoToBeDeleted.Add(k.ToString());
+            }
+            Console.WriteLine(debugInfoToBeDeleted.Count);
+            DeleteDebugInfo(debugInfoToBeDeleted);
+        }
+
     }
 }
+

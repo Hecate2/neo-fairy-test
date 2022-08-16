@@ -13,6 +13,7 @@ namespace Neo.Plugins
             this.system = system;
             this.settings = settings;
             ConsoleHelper.Info($"Fairy server running at {settings.BindAddress}:{settings.Port}.\nBy default, Fairy plugin should not be exposed to the public.");
+            InitializeTimer();
         }
     }
 }
