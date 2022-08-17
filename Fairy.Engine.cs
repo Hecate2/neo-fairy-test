@@ -116,7 +116,7 @@ namespace Neo.Plugins
             foreach (var (id, session) in sessionStringToFairySession)
                 if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
                     toBeDestroyed.Add((id, session));
-            Console.WriteLine(toBeDestroyed.Count);
+            //Console.WriteLine(toBeDestroyed.Count);
             foreach (var (id, _) in toBeDestroyed)
                 sessionStringToFairySession.Remove(id, out _);
             foreach (var (_, session) in toBeDestroyed)
@@ -135,7 +135,7 @@ namespace Neo.Plugins
                 if (contractName == null)
                     debugInfoToBeDeleted.Add(k.ToString());
             }
-            Console.WriteLine(debugInfoToBeDeleted.Count);
+            //Console.WriteLine(debugInfoToBeDeleted.Count);
             DeleteDebugInfo(debugInfoToBeDeleted);
         }
 
