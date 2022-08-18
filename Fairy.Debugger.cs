@@ -83,14 +83,16 @@ namespace Neo.Plugins
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
             try
             {
-                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
-                json["sourcefilename"] = sourceCodeBreakpoint.SourceFilename;
-                json["sourcelinenum"] = sourceCodeBreakpoint.LineNum;
+                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
+                json["sourcefilename"] = sourceCodeBreakpoint.sourceFilename;
+                json["sourcelinenum"] = sourceCodeBreakpoint.lineNum;
+                json["sourcecontent"] = sourceCodeBreakpoint.sourceContent;
             }
             catch
             {
                 json["sourcefilename"] = null;
                 json["sourcelinenum"] = null;
+                json["sourcecontent"] = null;
             }
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
@@ -100,7 +102,15 @@ namespace Neo.Plugins
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
-                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
+                    UInt160 contextScriptHash = context.GetScriptHash();
+                    try
+                    {
+                        string sourceCodeTraceback = "";
+                        SourceFilenameAndLineNum sourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash][(uint)context.InstructionPointer];
+                        sourceCodeTraceback += $"\r\nFile {sourceCode.sourceFilename}, line {sourceCode.lineNum}: {sourceCode.sourceContent}";
+                        traceback += sourceCodeTraceback;
+                    }catch(Exception _) {; }
+                    traceback += $"\r\n\tScriptHash={contextScriptHash}, InstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
                 if (!logs.IsEmpty)
                 {
@@ -146,11 +156,13 @@ namespace Neo.Plugins
             OpCode currentOpCode = engine.CurrentContext.CurrentInstruction.OpCode;
             if ((requiredBreakReason & BreakReason.Call) > 0 &&
                (currentOpCode == OpCode.CALL || currentOpCode == OpCode.CALLA || currentOpCode == OpCode.CALLT || currentOpCode == OpCode.CALL_L
-             || currentOpCode == OpCode.SYSCALL))
+             || (currentOpCode == OpCode.SYSCALL && engine.CurrentContext.CurrentInstruction.TokenU32 == ApplicationEngine.System_Contract_Call.Hash)))
             {
                 engine.ExecuteNext();
                 if (engine.CurrentContext.CurrentInstruction.OpCode == OpCode.INITSLOT)
                     engine.ExecuteNext();
+                else
+                    return engine;
                 engine.State = VMState.BREAK;
                 actualBreakReason |= BreakReason.Call;
                 return engine;

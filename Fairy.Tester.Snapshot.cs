@@ -86,9 +86,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             ulong timestamp = ulong.Parse(_params[1].AsString());
-            FairySession runtimeArgs = sessionStringToFairySession[session];
-            runtimeArgs.timestamp = timestamp;
-            sessionStringToFairySession[session] = runtimeArgs;
+            sessionStringToFairySession[session].timestamp = timestamp;
             JObject json = new();
             json[session] = timestamp;
             return json;

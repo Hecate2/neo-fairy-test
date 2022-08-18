@@ -10,9 +10,10 @@ namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        public struct SourceFilenameAndLineNum { public string SourceFilename; public uint LineNum;}
+        public struct SourceFilenameAndLineNum { public string sourceFilename; public uint lineNum; public string sourceContent; }
         public readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceLineNums = new();
-        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();
+        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToInstructionPointerToSourceLineNum = new();  // stores only assembly instructions which are the beginning of source code lines. Used for setting source code breakpoints; DO NOT FILL sourceContent!
+        public readonly ConcurrentDictionary<UInt160, Dictionary<uint, SourceFilenameAndLineNum>> contractScriptHashToAllInstructionPointerToSourceLineNum = new();  // stores a mapping of all instructions to corresponding source code lines. Used only for finding the source code from assembly.
         public readonly ConcurrentDictionary<UInt160, HashSet<string>> contractScriptHashToSourceLineFilenames = new();
         public readonly ConcurrentDictionary<UInt160, Dictionary<uint, OpCode>> contractScriptHashToInstructionPointerToOpCode = new();
         public readonly ConcurrentDictionary<UInt160, Dictionary<uint, bool>> contractScriptHashToInstructionPointerToCoverage = new();
@@ -62,6 +63,8 @@ namespace Neo.Plugins
             contractScriptHashToSourceLineNums[scriptHash] = sourceFilenameAndLineNums;
             Dictionary<uint, SourceFilenameAndLineNum> InstructionPointerToSourceLineNum = new();
             contractScriptHashToInstructionPointerToSourceLineNum[scriptHash] = InstructionPointerToSourceLineNum;
+            Dictionary<uint, SourceFilenameAndLineNum> AllInstructionPointerToSouceLineNum = new();
+            contractScriptHashToAllInstructionPointerToSourceLineNum[scriptHash] = AllInstructionPointerToSouceLineNum;
             Dictionary<uint, OpCode> instructionPointerToOpCode = new();
             contractScriptHashToInstructionPointerToOpCode[scriptHash] = instructionPointerToOpCode;
             Dictionary<uint, bool> instructionPointerToCoverage = new();
@@ -87,7 +90,7 @@ namespace Neo.Plugins
                         uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                         string filename = sourceCodeGroups[1].ToString();
                         filenames.Add(filename);
-                        SourceFilenameAndLineNum sourceFilenameAndLineNum = new SourceFilenameAndLineNum { SourceFilename=filename, LineNum=sourceCodeLineNum };
+                        SourceFilenameAndLineNum sourceFilenameAndLineNum = new SourceFilenameAndLineNum { sourceFilename=filename, lineNum=sourceCodeLineNum };// , sourceContent = sourceCodeGroups[3].ToString() };
                         InstructionPointerToSourceLineNum[instructionPointer] = sourceFilenameAndLineNum;
                         sourceFilenameAndLineNums.Add(sourceFilenameAndLineNum);
                     }
@@ -101,6 +104,41 @@ namespace Neo.Plugins
                     string[] opcodeAndOperand = opcodeGroups[2].ToString().Split();
                     instructionPointerToOpCode[instructionPointer] = (OpCode)Enum.Parse(typeof(OpCode), opcodeAndOperand[0]);
                     instructionPointerToCoverage[instructionPointer] = false;
+                    continue;
+                }
+            }
+            SourceFilenameAndLineNum parseState = new SourceFilenameAndLineNum { sourceFilename = "Undefined", lineNum = 0, sourceContent = "Undefined" };
+            for (lineNum = 0; lineNum < lines.Length; ++lineNum)
+            {
+                Match match;
+                match = dumpNefPatterns.methodStartRegex.Match(lines[lineNum]);
+                if (match.Success)
+                {
+                    parseState.sourceFilename = match.Groups[1].ToString();
+                    parseState.lineNum = 0;
+                    parseState.sourceContent = match.Groups[1].ToString();
+                    continue;
+                }
+                match = dumpNefPatterns.methodEndRegex.Match(lines[lineNum]);
+                if (match.Success)
+                {
+                    parseState.sourceFilename = "Undefined";
+                    parseState.lineNum = 0;
+                    parseState.sourceContent = "Undefined";
+                    continue;
+                }
+                match = dumpNefPatterns.sourceCodeRegex.Match(lines[lineNum]);
+                if (match.Success)
+                {
+                    parseState.sourceFilename = match.Groups[1].ToString();
+                    parseState.lineNum = uint.Parse(match.Groups[2].ToString());
+                    parseState.sourceContent = match.Groups[3].ToString();
+                    continue;
+                }
+                match = dumpNefPatterns.opCodeRegex.Match(lines[lineNum]);
+                if (match.Success)
+                {
+                    AllInstructionPointerToSouceLineNum[uint.Parse(match.Groups[1].ToString())] = parseState;
                     continue;
                 }
             }

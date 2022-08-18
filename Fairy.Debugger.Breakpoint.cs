@@ -113,7 +113,7 @@ namespace Neo.Plugins
                 uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
                 i++;
                 JObject json = new();
-                SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { SourceFilename=sourceCodeFilename, LineNum=sourceCodeBreakpointLineNum };
+                SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { sourceFilename=sourceCodeFilename, lineNum=sourceCodeBreakpointLineNum };
                 if (contractScriptHashToSourceLineNums[scriptHash].Contains(breakpoint))
                 {
                     sourceCodeBreakpoints.Add(breakpoint);
@@ -138,13 +138,13 @@ namespace Neo.Plugins
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
-            List<SourceFilenameAndLineNum> sourceCodeBreakpoints = contractScriptHashToSourceCodeBreakpoints[scriptHash].OrderBy(p => p.SourceFilename).ThenBy(p => p.LineNum).ToList();
+            List<SourceFilenameAndLineNum> sourceCodeBreakpoints = contractScriptHashToSourceCodeBreakpoints[scriptHash].OrderBy(p => p.sourceFilename).ThenBy(p => p.lineNum).ToList();
             JArray breakpointList = new();
             foreach (SourceFilenameAndLineNum sourceCodeBreakpointLineNum in sourceCodeBreakpoints)
             {
                 JObject breakpoint = new JObject();
-                breakpoint["filename"] = sourceCodeBreakpointLineNum.SourceFilename;
-                breakpoint["line"] = sourceCodeBreakpointLineNum.LineNum;
+                breakpoint["filename"] = sourceCodeBreakpointLineNum.sourceFilename;
+                breakpoint["line"] = sourceCodeBreakpointLineNum.lineNum;
                 breakpointList.Add(breakpoint);
             }
             return breakpointList;
@@ -162,12 +162,12 @@ namespace Neo.Plugins
             JArray breakpointList = new();
             if (_params.Count == 1)  // delete all breakpoints
             {
-                List<SourceFilenameAndLineNum> sourceCodeBreakpoints = contractScriptHashToSourceCodeBreakpoints[scriptHash].OrderBy(p => p.SourceFilename).ThenBy(p => p.LineNum).ToList();
+                List<SourceFilenameAndLineNum> sourceCodeBreakpoints = contractScriptHashToSourceCodeBreakpoints[scriptHash].OrderBy(p => p.sourceFilename).ThenBy(p => p.lineNum).ToList();
                 foreach (SourceFilenameAndLineNum sourceCodeBreakpointLineNum in sourceCodeBreakpoints)
                 {
                     JObject json = new();
-                    json["filename"] = sourceCodeBreakpointLineNum.SourceFilename;
-                    json["line"] = sourceCodeBreakpointLineNum.LineNum;
+                    json["filename"] = sourceCodeBreakpointLineNum.sourceFilename;
+                    json["line"] = sourceCodeBreakpointLineNum.lineNum;
                     breakpointList.Add(json);
                 }
                 contractScriptHashToSourceCodeBreakpoints[scriptHash].Clear();
@@ -182,7 +182,7 @@ namespace Neo.Plugins
                     i++;
                     uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
                     i++;
-                    if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { SourceFilename=sourceCodeBreakpointFilename, LineNum=sourceCodeBreakpointLineNum }))
+                    if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { sourceFilename=sourceCodeBreakpointFilename, lineNum=sourceCodeBreakpointLineNum }))
                     {
                         JObject json = new();
                         json["filename"] = sourceCodeBreakpointFilename;

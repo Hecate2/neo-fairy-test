@@ -76,7 +76,7 @@ namespace Neo.Plugins
             public FairyEngine _engine;
             public FairyEngine? debugEngine { get { ResetExpiration(); return _debugEngine; } set { _debugEngine = value; ResetExpiration(); } }
             public FairyEngine? _debugEngine = null;
-            public ulong timestamp { get { ResetExpiration(); return _timestamp; } set { timestamp = value; ResetExpiration(); } }
+            public ulong timestamp { get { ResetExpiration(); return _timestamp; } set { _timestamp = value; ResetExpiration(); } }
             public ulong _timestamp = 0;
             // public BigInteger? designatedRandom = null;
 

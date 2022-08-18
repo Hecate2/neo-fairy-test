@@ -37,6 +37,25 @@ InstructionPointer=21390, OpCode RET, Script Length=21390
 [0x5c1068339fae89eb1a743909d0213e1d99dc5dc9] AnyUpdateShortSafe: No enough token to lend
 ```
 
+The traceback of the debugger is even more detailed, with your DebugInfo registered:
+
+```
+Called Contract Does Not Exist: 0x2a6cd301cad359fc85e42454217e51485fffe745
+CallingScriptHash=0x389193b1789bdecb40e817d74d90c1e124c6dbab
+CurrentScriptHash=0xa59de097d11bc7130e51c5dcd7aa8e11fd9d4304
+EntryScriptHash=0x389193b1789bdecb40e817d74d90c1e124c6dbab
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Span`1& arguments, Signature sig, Boolean constructor, Boolean wrapExceptions)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at Neo.SmartContract.ApplicationEngine.OnSysCall(InteropDescriptor descriptor) in C:\Users\RhantolkYtriHistoria\NEO\neo\src\neo\SmartContract\ApplicationEngine.cs:line 522
+   at Neo.SmartContract.ApplicationEngine.OnSysCall(UInt32 method) in C:\Users\RhantolkYtriHistoria\NEO\neo\src\neo\SmartContract\ApplicationEngine.cs:line 506
+   at Neo.VM.ExecutionEngine.ExecuteInstruction(Instruction instruction) in C:\Users\RhantolkYtriHistoria\NEO\neo-vm\src\Neo.VM\ExecutionEngine.cs:line 439
+   at Neo.VM.ExecutionEngine.ExecuteNext() in C:\Users\RhantolkYtriHistoria\NEO\neo-vm\src\Neo.VM\ExecutionEngine.cs:line 1454
+File NFTLoan.cs, line 247: ExecutionEngine.Assert((bool)Contract.Call(externalTokenContract, "transfer", CallFlags.All, renter, Runtime.ExecutingScriptHash, amountForRent, externalTokenId, TRANSACTION_DATA), "Transfer failed");
+	ScriptHash=0xa59de097d11bc7130e51c5dcd7aa8e11fd9d4304, InstructionPointer=4448, OpCode SYSCALL, Script Length=8518
+	ScriptHash=0x389193b1789bdecb40e817d74d90c1e124c6dbab, InstructionPointer=96, OpCode , Script Length=96
+```
+
 `Fairy.Debugger` relies on `Fairy.Tester`. `Fairy.Coverage` relies on `Fairy.Debugger`.
 
 Try the command `fairy` in `neo-cli`!
