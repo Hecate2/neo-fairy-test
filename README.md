@@ -77,9 +77,10 @@ You probably have to change the directories of dependencies in `Fairy.csproj`
 #### Usage
 
 1. Please read the source codes for help. I have not written any docs.
-2. Through RPC, `SetGasBalance(session, account, balance)` to help yourself get 100_0000_0000 GAS. ([Fairy.Utils.cs](Fairy.Utils.cs)). Use any string as your session name. If the session name is not recognized by Fairy, a new snapshot from current blockchain state will be generated for your session. **Keep using the same session name for continuous executions.** 
+2. Through RPC, `SetGasBalance(session, account, balance)` to help yourself get 100_0000_0000 (or any amount of) GAS. ([Fairy.Utils.cs](Fairy.Utils.cs)). Use any string as your session name. If the session name is not recognized by Fairy, a new snapshot from current blockchain state will be generated for your session. **Keep using the same session name for continuous executions.** 
 3. `VirtualDeploy` your contract. ([Fairy.Utils.cs](Fairy.Utils.cs))
-4. `InvokeFunctionWithSession`([Fairy.Tester.cs](Fairy.Tester.cs))
-5. If you want to debug a call, `SetDebugInfo`([Fairy.Debugger.DebugInfo.cs](Fairy.Debugger.DebugInfo.cs)) and `SetSourceCodeBreakpoints`([Fairy.Debugger.Breakpoint.cs](Fairy.Debugger.Breakpoint.cs)). Then run your debug session with `DebugFunctionWithSession(session, ...)`([Fairy.Debugger.cs](Fairy.Debugger.cs)). The runtime environment is inherited from the same session name constructed by `InvokeFunctionWithSession`. 
-6. The debugger shall break on breakpoints or exceptions. Use APIs in [Fairy.Debugger.cs](Fairy.Debugger.cs) for happy debugging!
+4. `InvokeFunctionWithSession` ([Fairy.Tester.cs](Fairy.Tester.cs))
+5. Set timestamp and runtime random number obtained by smart contracts at will! ([Fairy.Engine.cs](Fairy.Engine.cs))
+6. If you want to debug a call, `SetDebugInfo`([Fairy.Debugger.DebugInfo.cs](Fairy.Debugger.DebugInfo.cs)) and `SetSourceCodeBreakpoints`([Fairy.Debugger.Breakpoint.cs](Fairy.Debugger.Breakpoint.cs)). Then run your debug session with `DebugFunctionWithSession(session, ...)`([Fairy.Debugger.cs](Fairy.Debugger.cs)). The runtime environment is inherited from the same session name constructed by `InvokeFunctionWithSession`. 
+7. The debugger shall break on breakpoints or exceptions. Use APIs in [Fairy.Debugger.cs](Fairy.Debugger.cs) for happy debugging!
 

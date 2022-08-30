@@ -40,6 +40,8 @@ namespace Neo.Plugins
             {
                 Block dummyBlock = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: sessionStringToFairySession[session].engine.serviceArgs.timestamp);
                 Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script, persistingBlock: dummyBlock);
+                json["gasconsumed"] = tx.SystemFee;
+                json["networkfee"] = tx.NetworkFee;
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
                 sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine);
                 json[session] = hash.ToString();

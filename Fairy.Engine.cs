@@ -256,7 +256,7 @@ namespace Neo.Plugins
             }
         }
 
-        internal Timer timer;
+        internal Timer? timer;
 
         internal void InitializeTimer()
         {
