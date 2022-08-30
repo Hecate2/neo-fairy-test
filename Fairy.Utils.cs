@@ -41,7 +41,7 @@ namespace Neo.Plugins
                 Block dummyBlock = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: sessionStringToFairySession[session].timestamp);
                 Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script, persistingBlock: dummyBlock);
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
@@ -228,35 +228,6 @@ namespace Neo.Plugins
             {
                 throw new NotImplementedException();
             }
-        }
-
-        private JObject GetInvokeResult(byte[] script, Signers signers = null)
-        {
-            Transaction? tx = signers == null ? null : new Transaction
-            {
-                Signers = signers.GetSigners(),
-                Attributes = System.Array.Empty<TransactionAttribute>(),
-                Witnesses = signers.Witnesses,
-            };
-            using FairyEngine engine = FairyEngine.Run(script, system.StoreView, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
-            JObject json = new();
-            json["script"] = Convert.ToBase64String(script);
-            json["state"] = engine.State;
-            json["gasconsumed"] = engine.GasConsumed.ToString();
-            json["exception"] = GetExceptionMessage(engine.FaultException);
-            try
-            {
-                json["stack"] = new JArray(engine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
-            }
-            catch (InvalidOperationException)
-            {
-                json["stack"] = "error: invalid operation";
-            }
-            if (engine.State != VMState.FAULT)
-            {
-                ProcessInvokeWithWallet(json, signers);
-            }
-            return json;
         }
 
         private static JObject ToJson(StackItem item, int max)

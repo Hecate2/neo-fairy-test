@@ -14,7 +14,7 @@ namespace Neo.Plugins
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
-            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke);
+            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine);
         }
 
         [RpcMethod]
@@ -103,43 +103,5 @@ namespace Neo.Plugins
             }
             return json;
         }
-
-        //[RpcMethod]
-        //protected virtual JToken SetSnapshotRandom(JArray _params)
-        //{
-        //    string session = _params[0].AsString();
-        //    string? designatedRandomString = _params[1]?.AsString();
-        //    if (designatedRandomString == null)
-        //    {
-        //        RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
-        //        runtimeArgs.designatedRandom = null;
-        //        sessionToRuntimeArgs[session] = runtimeArgs;
-        //    }
-        //    else
-        //    {
-        //        BigInteger designatedRandom = BigInteger.Parse(designatedRandomString);
-        //        RuntimeArgs runtimeArgs = sessionToRuntimeArgs[session];
-        //        runtimeArgs.designatedRandom = designatedRandom;
-        //        sessionToRuntimeArgs[session] = runtimeArgs;
-        //    }
-        //    JObject json = new();
-        //    json[session] = designatedRandomString;
-        //    return json;
-        //}
-
-        //[RpcMethod]
-        //protected virtual JToken GetSnapshotRandom(JArray _params)
-        //{
-        //    JObject json = new();
-        //    foreach (var s in _params)
-        //    {
-        //        string session = s.AsString();
-        //        if (sessionToRuntimeArgs.ContainsKey(session))
-        //            json[session] = sessionToRuntimeArgs[session].designatedRandom.ToString();
-        //        else
-        //            json[session] = null;
-        //    }
-        //    return json;
-        //}
     }
 }

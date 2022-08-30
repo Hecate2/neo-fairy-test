@@ -71,11 +71,11 @@ namespace Neo.Plugins
             logs.Clear();
             FairyEngine.Log += CacheLog;
             if (testSession.timestamp == 0)
-                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             else
             {
                 block = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp);
-                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke);
+                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             }
             FairyEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)

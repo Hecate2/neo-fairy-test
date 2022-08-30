@@ -4,6 +4,8 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using System.Numerics;
+using System.Reflection;
 
 namespace Neo.Plugins
 {
@@ -11,11 +13,23 @@ namespace Neo.Plugins
     {
         public class FairyEngine : ApplicationEngine
         {
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic){}
-
-            public static new FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null)
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine oldEngine = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
             {
-                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic);
+                if (oldEngine != null)
+                {
+                    this.services = oldEngine.services;
+                    this.serviceArgs = oldEngine.serviceArgs;
+                }
+                else
+                {
+                    this.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    this.serviceArgs = new ServiceArgs();
+                }
+            }
+
+            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine oldEngine = null)
+            {
+                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
             }
 
             public new VMState State
@@ -35,14 +49,80 @@ namespace Neo.Plugins
                 base.ExecuteNext();
             }
 
-            public static new FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null)
+            public static new FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine oldEngine = null)
             {
                 persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: 0);
-                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic);
+                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
                 engine.LoadScript(script, initialPosition: offset);
                 engine.Execute();
                 return engine;
             }
+
+            public Dictionary<uint, InteropDescriptor> services;
+
+            public class ServiceArgs
+            {
+                public BigInteger? designatedRandom = null;
+            }
+            public ServiceArgs serviceArgs;
+
+            protected override void OnSysCall(uint method)
+            {
+                OnSysCall(this.services[method]);
+            }
+
+            public InteropDescriptor Register(string name, MethodInfo method, uint hash, long fixedPrice, CallFlags requiredCallFlags)
+            {
+                InteropDescriptor descriptor = new()
+                {
+                    Name = name,
+                    Handler = method,
+                    FixedPrice = fixedPrice,
+                    RequiredCallFlags = requiredCallFlags
+                };
+                this.services ??= new Dictionary<uint, InteropDescriptor>();
+                this.services[hash] = descriptor;
+                return descriptor;
+            }
+
+            public new BigInteger GetRandom() => base.GetRandom();
+            public BigInteger GetFairyRandom()
+            {
+                if (serviceArgs.designatedRandom != null)
+                    return (BigInteger)serviceArgs.designatedRandom;
+                return GetRandom();
+            }
+        }
+
+
+        [RpcMethod]
+        protected virtual JToken SetSnapshotRandom(JArray _params)
+        {
+            string session = _params[0].AsString();
+            string? designatedRandomString = _params[1]?.AsString();
+            FairySession fairySession = sessionStringToFairySession[session];
+            if (designatedRandomString == null)
+                fairySession.designatedRandom = null;
+            else
+                fairySession.designatedRandom = BigInteger.Parse(designatedRandomString);
+            JObject json = new();
+            json[session] = designatedRandomString;
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JToken GetSnapshotRandom(JArray _params)
+        {
+            JObject json = new();
+            foreach (var s in _params)
+            {
+                string session = s.AsString();
+                if (sessionStringToFairySession.ContainsKey(session))
+                    json[session] = sessionStringToFairySession[session].designatedRandom.ToString();
+                else
+                    json[session] = null;
+            }
+            return json;
         }
 
         private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp = 0)
@@ -73,12 +153,42 @@ namespace Neo.Plugins
         {
             public DateTime StartTime;
             public FairyEngine engine { get { ResetExpiration(); return _engine; } set { _engine = value; ResetExpiration(); } }
-            public FairyEngine _engine;
+            private FairyEngine _engine;
             public FairyEngine? debugEngine { get { ResetExpiration(); return _debugEngine; } set { _debugEngine = value; ResetExpiration(); } }
-            public FairyEngine? _debugEngine = null;
+            private FairyEngine? _debugEngine = null;
             public ulong timestamp { get { ResetExpiration(); return _timestamp; } set { _timestamp = value; ResetExpiration(); } }
-            public ulong _timestamp = 0;
-            // public BigInteger? designatedRandom = null;
+            private ulong _timestamp = 0;
+
+            public BigInteger? designatedRandom
+            {
+                get
+                {
+                    ResetExpiration();
+                    return engine.serviceArgs.designatedRandom;
+                }
+                set
+                {
+                    if (value == null)
+                    {
+                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
+                        engine.serviceArgs.designatedRandom = null;
+                    }
+                    else
+                    {
+                        engine.serviceArgs.designatedRandom = value;
+                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
+                    }
+                    ResetExpiration();
+                }
+            }
+
+            public void ResetServices()
+            {
+                engine.serviceArgs = new();
+                _timestamp = 0;
+                engine.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                ResetExpiration();
+            }
 
             public FairySession(Fairy fairy)
             {
