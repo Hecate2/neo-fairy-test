@@ -67,16 +67,9 @@ namespace Neo.Plugins
                 sessionStringToFairySession[session] = testSession;
             }
             FairyEngine oldEngine = testSession.engine, newEngine;
-            Block block = null;
             logs.Clear();
             FairyEngine.Log += CacheLog;
-            if (testSession.timestamp == 0)
-                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
-            else
-            {
-                block = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp);
-                newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), persistingBlock: block, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
-            }
+            newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             FairyEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionStringToFairySession[session].engine = newEngine;
@@ -144,7 +137,7 @@ namespace Neo.Plugins
             }
             if (newEngine.State != VMState.FAULT)
             {
-                ProcessInvokeWithWalletAndSnapshot(oldEngine.Snapshot, json, signers, block: block);
+                ProcessInvokeWithWalletAndSnapshot(oldEngine.Snapshot, json, signers, block: CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp));
             }
             return json;
         }

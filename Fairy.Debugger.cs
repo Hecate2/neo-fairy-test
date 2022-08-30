@@ -51,10 +51,7 @@ namespace Neo.Plugins
             logs.Clear();
             FairyEngine.Log += CacheLog;
             BreakReason breakReason = BreakReason.None;
-            if (testSession.timestamp == 0)
-                newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
-            else
-                newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, persistingBlock: CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
+            newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
             FairyEngine.Log -= CacheLog;
             if (writeSnapshot)
                 sessionStringToFairySession[session].debugEngine = newEngine;

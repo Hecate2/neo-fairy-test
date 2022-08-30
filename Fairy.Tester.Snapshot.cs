@@ -80,28 +80,5 @@ namespace Neo.Plugins
             json[to] = from;
             return json;
         }
-
-        [RpcMethod]
-        protected virtual JToken SetSnapshotTimestamp(JArray _params)
-        {
-            string session = _params[0].AsString();
-            ulong timestamp = ulong.Parse(_params[1].AsString());
-            sessionStringToFairySession[session].timestamp = timestamp;
-            JObject json = new();
-            json[session] = timestamp;
-            return json;
-        }
-
-        [RpcMethod]
-        protected virtual JToken GetSnapshotTimeStamp(JArray _params)
-        {
-            JObject json = new();
-            foreach (var s in _params)
-            {
-                string session = s.AsString();
-                json[session] = sessionStringToFairySession[session].timestamp;
-            }
-            return json;
-        }
     }
 }

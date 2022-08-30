@@ -13,7 +13,7 @@ namespace Neo.Plugins
     {
         public class FairyEngine : ApplicationEngine
         {
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine oldEngine = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
             {
                 if (oldEngine != null)
                 {
@@ -27,7 +27,7 @@ namespace Neo.Plugins
                 }
             }
 
-            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine oldEngine = null)
+            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null)
             {
                 return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
             }
@@ -49,9 +49,9 @@ namespace Neo.Plugins
                 base.ExecuteNext();
             }
 
-            public static new FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine oldEngine = null)
+            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null)
             {
-                persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: 0);
+                persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
                 FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
                 engine.LoadScript(script, initialPosition: offset);
                 engine.Execute();
@@ -62,6 +62,7 @@ namespace Neo.Plugins
 
             public class ServiceArgs
             {
+                public ulong? timestamp = null;
                 public BigInteger? designatedRandom = null;
             }
             public ServiceArgs serviceArgs;
@@ -86,14 +87,42 @@ namespace Neo.Plugins
             }
 
             public new BigInteger GetRandom() => base.GetRandom();
-            public BigInteger GetFairyRandom()
-            {
-                if (serviceArgs.designatedRandom != null)
-                    return (BigInteger)serviceArgs.designatedRandom;
-                return GetRandom();
-            }
+            public BigInteger GetFairyRandom() => serviceArgs.designatedRandom != null ? (BigInteger)serviceArgs.designatedRandom : base.GetRandom();
+            public new ulong GetTime() => base.GetTime();
+            public ulong GetFairyTime() => serviceArgs.timestamp != null ? (ulong)serviceArgs.timestamp : GetTime();
         }
 
+        [RpcMethod]
+        protected virtual JToken SetSnapshotTimestamp(JArray _params)
+        {
+            string session = _params[0].AsString();
+            ulong? timestamp;
+            if (_params[1] == null)
+            {
+                timestamp = null;
+                sessionStringToFairySession[session].timestamp = null;
+            }
+            else
+            {
+                timestamp = ulong.Parse(_params[1].AsString());
+                sessionStringToFairySession[session].timestamp = timestamp;
+            }
+            JObject json = new();
+            json[session] = timestamp;
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JToken GetSnapshotTimeStamp(JArray _params)
+        {
+            JObject json = new();
+            foreach (var s in _params)
+            {
+                string session = s.AsString();
+                json[session] = sessionStringToFairySession[session].timestamp;
+            }
+            return json;
+        }
 
         [RpcMethod]
         protected virtual JToken SetSnapshotRandom(JArray _params)
@@ -125,7 +154,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong timestamp = 0)
+        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong? timestamp = null)
         {
             UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
             Block currentBlock = NativeContract.Ledger.GetBlock(snapshot, hash);
@@ -136,7 +165,7 @@ namespace Neo.Plugins
                     Version = 0,
                     PrevHash = hash,
                     MerkleRoot = new UInt256(),
-                    Timestamp = timestamp == 0 ? currentBlock.Timestamp + settings.MillisecondsPerBlock : timestamp,
+                    Timestamp = timestamp == null ? currentBlock.Timestamp + settings.MillisecondsPerBlock : (ulong)timestamp,
                     Index = currentBlock.Index + 1,
                     NextConsensus = currentBlock.NextConsensus,
                     Witness = new Witness
@@ -156,16 +185,31 @@ namespace Neo.Plugins
             private FairyEngine _engine;
             public FairyEngine? debugEngine { get { ResetExpiration(); return _debugEngine; } set { _debugEngine = value; ResetExpiration(); } }
             private FairyEngine? _debugEngine = null;
-            public ulong timestamp { get { ResetExpiration(); return _timestamp; } set { _timestamp = value; ResetExpiration(); } }
-            private ulong _timestamp = 0;
+
+            public NeoSystem system;
+            public ProtocolSettings settings;
+
+            public ulong? timestamp
+            {
+                get => engine.serviceArgs.timestamp;
+                set
+                {
+                    if (value == null)
+                    {
+                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
+                        engine.serviceArgs.timestamp = null;
+                    }
+                    else
+                    {
+                        engine.serviceArgs.timestamp = value;
+                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
+                    }
+                }
+            }
 
             public BigInteger? designatedRandom
             {
-                get
-                {
-                    ResetExpiration();
-                    return engine.serviceArgs.designatedRandom;
-                }
+                get => engine.serviceArgs.designatedRandom;
                 set
                 {
                     if (value == null)
@@ -178,20 +222,20 @@ namespace Neo.Plugins
                         engine.serviceArgs.designatedRandom = value;
                         engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
                     }
-                    ResetExpiration();
                 }
             }
 
             public void ResetServices()
             {
                 engine.serviceArgs = new();
-                _timestamp = 0;
                 engine.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                 ResetExpiration();
             }
 
             public FairySession(Fairy fairy)
             {
+                system = fairy.system;
+                settings = fairy.system.Settings;
                 _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
             }
 
