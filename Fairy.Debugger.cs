@@ -28,7 +28,8 @@ namespace Neo.Plugins
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
             ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
-            Signers? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
+            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 6 ? WitnessesFromJson((JArray)_params[5]) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
@@ -37,9 +38,9 @@ namespace Neo.Plugins
             }
             Transaction? tx = signers == null ? null : new Transaction
             {
-                Signers = signers.GetSigners(),
+                Signers = signers,
                 Attributes = System.Array.Empty<TransactionAttribute>(),
-                Witnesses = signers.Witnesses,
+                Witnesses = witnesses,
             };
             FairySession testSession;
             if (!sessionStringToFairySession.TryGetValue(session, out testSession))

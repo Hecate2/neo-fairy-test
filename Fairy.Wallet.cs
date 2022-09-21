@@ -64,37 +64,6 @@ namespace Neo.Plugins
             return true;
         }
 
-        private void ProcessInvokeWithWallet(JObject result, Signers? signers = null)
-        {
-            if (fairyWallet == null || signers == null) return;
-
-            Signer[] witnessSigners = signers.GetSigners().ToArray();
-            UInt160? sender = signers.Size > 0 ? signers.GetSigners()[0].Account : null;
-            if (witnessSigners.Length <= 0) return;
-
-            Transaction tx;
-            try
-            {
-                tx = fairyWallet.MakeTransaction(system.StoreView, Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke);
-            }
-            catch (Exception e)
-            {
-                result["exception"] = GetExceptionMessage(e);
-                return;
-            }
-            ContractParametersContext context = new(system.StoreView, tx, system.Settings.Network);
-            fairyWallet.Sign(context);
-            if (context.Completed)
-            {
-                tx.Witnesses = context.GetWitnesses();
-                result["tx"] = Convert.ToBase64String(tx.ToArray());
-            }
-            else
-            {
-                result["pendingsignature"] = context.ToJson();
-            }
-        }
-
         internal static UInt160 AddressToScriptHash(string address, byte version)
         {
             if (UInt160.TryParse(address, out var scriptHash))

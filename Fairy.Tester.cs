@@ -27,14 +27,15 @@ namespace Neo.Plugins
             UInt160 script_hash = UInt160.Parse(_params[2].AsString());
             string operation = _params[3].AsString();
             ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
-            Signers signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
+            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 6 ? WitnessesFromJson((JArray)_params[5]) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
             {
                 script = sb.EmitDynamicCall(script_hash, operation, args).ToArray();
             }
-            return GetInvokeResultWithSession(session, writeSnapshot, script, signers);
+            return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 
         [RpcMethod]
@@ -43,8 +44,9 @@ namespace Neo.Plugins
             string session = _params[0].AsString();
             bool writeSnapshot = _params[1].AsBoolean();
             byte[] script = Convert.FromBase64String(_params[2].AsString());
-            Signers signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
-            return GetInvokeResultWithSession(session, writeSnapshot, script, signers);
+            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 4 ? WitnessesFromJson((JArray)_params[3]) : null;
+            return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 
         private void CacheLog(object sender, LogEventArgs logEventArgs)
@@ -52,14 +54,8 @@ namespace Neo.Plugins
             logs.Enqueue(logEventArgs);
         }
 
-        private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signers signers = null)
+        private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signer[]? signers = null, Witness[]? witnesses = null)
         {
-            Transaction? tx = signers == null ? null : new Transaction
-            {
-                Signers = signers.GetSigners(),
-                Attributes = System.Array.Empty<TransactionAttribute>(),
-                Witnesses = signers.Witnesses,
-            };
             FairySession testSession;
             if (!sessionStringToFairySession.TryGetValue(session, out testSession))
             {  // we allow initializing a new session when executing
@@ -68,6 +64,16 @@ namespace Neo.Plugins
             }
             FairyEngine oldEngine = testSession.engine, newEngine;
             logs.Clear();
+            Random random = new();
+            Transaction? tx = signers == null ? null : new Transaction
+            {
+                Nonce = (uint)random.Next(),
+                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(testSession.engine.Snapshot) + system.Settings.MaxValidUntilBlockIncrement,
+                Signers = signers,
+                Attributes = Array.Empty<TransactionAttribute>(),
+                Script = script,
+                Witnesses = witnesses
+            };
             FairyEngine.Log += CacheLog;
             newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             FairyEngine.Log -= CacheLog;
@@ -142,13 +148,13 @@ namespace Neo.Plugins
             return json;
         }
 
-        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signers signers = null, Block block = null)
+        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signer[]? signers = null, Block block = null)
         {
             if (fairyWallet == null || signers == null) return;
 
-            Signer[] witnessSigners = signers.GetSigners().ToArray();
-            UInt160? sender = signers.Size > 0 ? signers.GetSigners()[0].Account : null;
+            Signer[] witnessSigners = signers;
             if (witnessSigners.Length <= 0) return;
+            UInt160? sender = signers.Length > 0 ? signers[0].Account : null;
 
             Transaction tx;
             try

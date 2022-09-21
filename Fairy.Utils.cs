@@ -186,52 +186,6 @@ namespace Neo.Plugins
             }
         }
 
-        private class Signers : IVerifiable
-        {
-            private readonly Signer[] _signers;
-            public Witness[] Witnesses { get; set; }
-            public int Size => _signers.Length;
-
-            public Signers(Signer[] signers)
-            {
-                _signers = signers;
-            }
-
-            public void Serialize(BinaryWriter writer)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void DeserializeUnsigned(BinaryReader reader)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Deserialize(ref MemoryReader reader)
-            {
-                throw new NotImplementedException();
-            }
-            public void DeserializeUnsigned(ref MemoryReader reader)
-            {
-                throw new NotImplementedException();
-            }
-
-            public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
-            {
-                return _signers.Select(p => p.Account).ToArray();
-            }
-
-            public Signer[] GetSigners()
-            {
-                return _signers;
-            }
-
-            public void SerializeUnsigned(BinaryWriter writer)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
         private static JObject ToJson(StackItem item, int max)
         {
             JObject json = item.ToJson();
@@ -249,35 +203,35 @@ namespace Neo.Plugins
             return json;
         }
 
-        private static Signers SignersFromJson(JArray _params, ProtocolSettings settings)
+        private static Signer[] SignersFromJson(JArray _params, ProtocolSettings settings)
         {
-            var ret = new Signers(_params.Select(u => new Signer()
+            var ret = _params.Select(u => new Signer
             {
                 Account = AddressToScriptHash(u["account"].AsString(), settings.AddressVersion),
                 Scopes = (WitnessScope)Enum.Parse(typeof(WitnessScope), u["scopes"]?.AsString()),
                 AllowedContracts = ((JArray)u["allowedcontracts"])?.Select(p => UInt160.Parse(p.AsString())).ToArray(),
-                AllowedGroups = ((JArray)u["allowedgroups"])?.Select(p => ECPoint.Parse(p.AsString(), ECCurve.Secp256r1)).ToArray()
-            }).ToArray())
-            {
-                Witnesses = _params
-                    .Select(u => new
-                    {
-                        Invocation = u["invocation"]?.AsString(),
-                        Verification = u["verification"]?.AsString()
-                    })
-                    .Where(x => x.Invocation != null || x.Verification != null)
-                    .Select(x => new Witness()
-                    {
-                        InvocationScript = Convert.FromBase64String(x.Invocation ?? string.Empty),
-                        VerificationScript = Convert.FromBase64String(x.Verification ?? string.Empty)
-                    }).ToArray()
-            };
+                AllowedGroups = ((JArray)u["allowedgroups"])?.Select(p => ECPoint.Parse(p.AsString(), ECCurve.Secp256r1)).ToArray(),
+                Rules = ((JArray)u["rules"])?.Select(r => WitnessRule.FromJson((JObject)r)).ToArray(),
+            }).ToArray();
 
             // Validate format
 
-            _ = IO.Helper.ToByteArray(ret.GetSigners()).AsSerializableArray<Signer>();
+            _ = IO.Helper.ToByteArray(ret).AsSerializableArray<Signer>();
 
             return ret;
+        }
+
+        private static Witness[] WitnessesFromJson(JArray _params)
+        {
+            return _params.Select(u => new
+            {
+                Invocation = u["invocation"]?.AsString(),
+                Verification = u["verification"]?.AsString()
+            }).Where(x => x.Invocation != null || x.Verification != null).Select(x => new Witness()
+            {
+                InvocationScript = Convert.FromBase64String(x.Invocation ?? string.Empty),
+                VerificationScript = Convert.FromBase64String(x.Verification ?? string.Empty)
+            }).ToArray();
         }
 
         static string? GetExceptionMessage(Exception exception)
