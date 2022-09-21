@@ -64,6 +64,7 @@ namespace Neo.Plugins
             {
                 public ulong? timestamp = null;
                 public BigInteger? designatedRandom = null;
+                //public uint? blockIndex = null;
             }
             public ServiceArgs serviceArgs;
 
@@ -90,6 +91,7 @@ namespace Neo.Plugins
             public BigInteger GetFairyRandom() => serviceArgs.designatedRandom != null ? (BigInteger)serviceArgs.designatedRandom : base.GetRandom();
             public new ulong GetTime() => base.GetTime();
             public ulong GetFairyTime() => serviceArgs.timestamp != null ? (ulong)serviceArgs.timestamp : GetTime();
+            //public ulong GetFairyBlockIndex() => serviceArgs.blockIndex != null ? (uint)serviceArgs.blockIndex : NativeContract.Ledger.CurrentIndex(this.Snapshot);
         }
 
         [RpcMethod]
@@ -154,7 +156,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong? timestamp = null)
+        private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong? timestamp = null, uint? index = null)
         {
             UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
             Block currentBlock = NativeContract.Ledger.GetBlock(snapshot, hash);
@@ -166,7 +168,7 @@ namespace Neo.Plugins
                     PrevHash = hash,
                     MerkleRoot = new UInt256(),
                     Timestamp = timestamp == null ? currentBlock.Timestamp + settings.MillisecondsPerBlock : (ulong)timestamp,
-                    Index = currentBlock.Index + 1,
+                    Index = index == null ? currentBlock.Index + 1 : (uint)index,
                     NextConsensus = currentBlock.NextConsensus,
                     Witness = new Witness
                     {
