@@ -250,12 +250,6 @@ namespace Neo.Plugins
             {
                 return $"hasDebugEngine: {debugEngine != null}\ttimestamp: {timestamp}";//\tdesignatedRandom: {designatedRandom}";
             }
-
-            public void Dispose()
-            {
-                engine?.Dispose();
-                debugEngine?.Dispose();
-            }
         }
 
         internal Timer? timer;
@@ -275,8 +269,6 @@ namespace Neo.Plugins
             //Console.WriteLine(toBeDestroyed.Count);
             foreach (var (id, _) in toBeDestroyed)
                 sessionStringToFairySession.Remove(id, out _);
-            foreach (var (_, session) in toBeDestroyed)
-                session.Dispose();
 
             JArray debugInfoToBeDeleted = new();
             foreach (UInt160 k in this.contractScriptHashToSourceLineFilenames.Keys)
