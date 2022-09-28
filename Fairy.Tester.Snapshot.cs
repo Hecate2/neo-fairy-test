@@ -73,9 +73,10 @@ namespace Neo.Plugins
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
-            sessionStringToFairySession[to] = sessionStringToFairySession[from];
-            var testSessionTo = sessionStringToFairySession[to];
+            FairySession testSessionTo = NewTestSession();
             testSessionTo.engine = BuildSnapshotWithDummyScript(sessionStringToFairySession[from].engine);
+            testSessionTo.debugEngine = null;
+            sessionStringToFairySession[to] = testSessionTo;
             JObject json = new();
             json[to] = from;
             return json;
