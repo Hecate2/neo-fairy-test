@@ -180,7 +180,7 @@ namespace Neo.Plugins
             else
             {
                 byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
-                oldEngine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(balanceBytes));
+                oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(balanceBytes));
                 json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
                 return json;
             }
