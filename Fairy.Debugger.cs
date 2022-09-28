@@ -395,7 +395,7 @@ namespace Neo.Plugins
             JToken method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
             JObject returnedJson = new();
             JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"];
-            foreach (JObject param in staticVariables)
+            foreach (JString param in staticVariables)
             {
                 string[] nameTypeAndIndex = param.AsString().Split(',');
                 int index = int.Parse(nameTypeAndIndex[2]);
