@@ -119,6 +119,17 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JObject GetTime(JArray _params)
+        {
+            JObject json = new();
+            if (_params.Count >= 1)
+                json["time"] = sessionStringToFairySession[_params[0].AsString()].engine.GetFairyTime();  // usually you can use GetSnapshotTimeStamp instead of this method
+            else
+                json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke).GetTime();
+            return json;
+        }
+
+        [RpcMethod]
         protected virtual JObject SetNeoBalance(JArray _params)
         {
             string session = _params[0].AsString();
