@@ -247,7 +247,17 @@ namespace Neo.Plugins
 
         static string? GetExceptionMessage(Exception exception)
         {
-            return exception?.GetBaseException().StackTrace;
+            var baseException = exception?.GetBaseException();
+            string returned;
+            if (baseException != null)
+            {
+                returned = baseException.StackTrace + "\n" + baseException.Message;
+                if (returned.Contains("Cannot Call Method Neo.SmartContract.Manifest.ContractMethodDescriptor"))
+                    returned += "\n!!!Check whether you have written [ContractPermission(\"*\", \"*\")] in your contract!!!";
+                return returned;
+            }
+            else
+                return null;
         }
     }
 }
