@@ -43,7 +43,7 @@ namespace Neo.Plugins
                 json["gasconsumed"] = tx.SystemFee;
                 json["networkfee"] = tx.NetworkFee;
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine);
+                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine, fairy: this);
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
@@ -125,7 +125,7 @@ namespace Neo.Plugins
             if (_params.Count >= 1)
                 json["time"] = sessionStringToFairySession[_params[0].AsString()].engine.GetFairyTime();  // usually you can use GetSnapshotTimeStamp instead of this method
             else
-                json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke).GetTime();
+                json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke, fairy: this).GetTime();
             return json;
         }
 

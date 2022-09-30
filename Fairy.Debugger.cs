@@ -173,9 +173,10 @@ namespace Neo.Plugins
                 return engine;
             }
             uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
+            UInt160 currentScripthash = engine.CurrentScriptHash;
             engine.ExecuteNext();
-            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(engine.CurrentScriptHash) && contractScriptHashToInstructionPointerToCoverage[engine.CurrentScriptHash].ContainsKey(currentInstructionPointer))
-                contractScriptHashToInstructionPointerToCoverage[engine.CurrentScriptHash][currentInstructionPointer] = true;
+            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(currentScripthash) && contractScriptHashToInstructionPointerToCoverage[currentScripthash].ContainsKey(currentInstructionPointer))
+                contractScriptHashToInstructionPointerToCoverage[currentScripthash][currentInstructionPointer] = true;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
                 return engine;
             UInt160 currentScriptHash = engine.CurrentScriptHash;

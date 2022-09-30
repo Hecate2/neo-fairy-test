@@ -4,6 +4,7 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Reflection;
 
@@ -13,7 +14,8 @@ namespace Neo.Plugins
     {
         public class FairyEngine : ApplicationEngine
         {
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            readonly Fairy fairy;
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null, Fairy? fairy = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
             {
                 if (oldEngine != null)
                 {
@@ -25,11 +27,13 @@ namespace Neo.Plugins
                     this.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     this.serviceArgs = new ServiceArgs();
                 }
+                if (fairy != null)
+                    this.fairy = fairy;
             }
 
-            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null)
+            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null)
             {
-                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
+                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy);
             }
 
             public new VMState State
@@ -49,10 +53,25 @@ namespace Neo.Plugins
                 base.ExecuteNext();
             }
 
-            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null)
+            public virtual VMState Execute()
+            {
+                if (State == VMState.BREAK)
+                    State = VMState.NONE;
+                while (State != VMState.HALT && State != VMState.FAULT)
+                {
+                    uint currentInstructionPointer = (uint)this.CurrentContext.InstructionPointer;
+                    UInt160 currentScripthash = this.CurrentScriptHash;
+                    ExecuteNext();
+                    if (currentScripthash != null && fairy.contractScriptHashToInstructionPointerToCoverage.ContainsKey(currentScripthash) && fairy.contractScriptHashToInstructionPointerToCoverage[currentScripthash].ContainsKey(currentInstructionPointer))
+                        fairy.contractScriptHashToInstructionPointerToCoverage[currentScripthash][currentInstructionPointer] = true;
+                }
+                return State;
+            }
+
+            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null)
             {
                 persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
-                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);
+                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy);
                 engine.LoadScript(script, initialPosition: offset);
                 engine.Execute();
                 return engine;
@@ -182,6 +201,7 @@ namespace Neo.Plugins
 
         public class FairySession
         {
+            readonly Fairy fairy;
             public DateTime StartTime;
             public FairyEngine engine { get { ResetExpiration(); return _engine; } set { _engine = value; ResetExpiration(); } }
             private FairyEngine _engine;
@@ -236,9 +256,10 @@ namespace Neo.Plugins
 
             public FairySession(Fairy fairy)
             {
+                this.fairy = fairy;
                 system = fairy.system;
                 settings = fairy.system.Settings;
-                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
+                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke, fairy: fairy);
             }
 
             public void ResetExpiration()
