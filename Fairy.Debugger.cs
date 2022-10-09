@@ -288,10 +288,12 @@ namespace Neo.Plugins
             {
                 engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.SourceCode);
                 if (engine.State == VMState.BREAK)
+                {
                     if ((breakReason & BreakReason.AssemblyBreakpoint) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
                         break;
                     if ((breakReason & BreakReason.SourceCode) > 0 && engine.InvocationStack.Count == invocationStackCount && engine.CurrentScriptHash == prevScriptHash)
                         break;
+                }
                 else
                     engine.State = VMState.NONE;
             }
