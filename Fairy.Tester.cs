@@ -39,6 +39,28 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JObject InvokeManyWithSession(JArray _params)
+        {
+            string session = _params[0].AsString();
+            bool writeSnapshot = _params[1].AsBoolean();
+            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 5 ? WitnessesFromJson((JArray)_params[4]) : null;
+            byte[] script = Array.Empty<byte>();
+            using (ScriptBuilder sb = new())
+            {
+                foreach (JArray invokeParams in (JArray)_params[2])
+                {
+                    UInt160 script_hash = UInt160.Parse(invokeParams[0].AsString());
+                    string operation = invokeParams[1].AsString();
+                    ContractParameter[] args = invokeParams.Count >= 3 ? ((JArray)invokeParams[2]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
+                    sb.EmitDynamicCall(script_hash, operation, args);
+                }
+                script = sb.ToArray();
+            }
+            return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
+        }
+
+        [RpcMethod]
         protected virtual JObject InvokeScriptWithSession(JArray _params)
         {
             string session = _params[0].AsString();

@@ -369,6 +369,14 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JToken GetInvocationStack(JArray _params)
+        {
+            string session = _params[0].AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            return new JArray(newEngine.InvocationStack.Select(p => ToJson(p.InstructionPointer, settings.MaxIteratorResultItems)));
+        }
+
+        [RpcMethod]
         protected virtual JToken GetInstructionPointer(JArray _params)
         {
             string session = _params[0].AsString();
