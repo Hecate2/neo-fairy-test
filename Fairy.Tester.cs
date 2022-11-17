@@ -138,7 +138,7 @@ namespace Neo.Plugins
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if(json["exception"] != null)
             {
-                string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
+                string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\nCurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
