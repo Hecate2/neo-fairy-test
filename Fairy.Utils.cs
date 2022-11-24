@@ -1,6 +1,7 @@
 using Neo.Cryptography.ECC;
 using Neo.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -62,6 +63,46 @@ namespace Neo.Plugins
                 }
             }
             return json;
+        }
+
+        /// <summary>
+        /// Wait until the transaction is included in blocks
+        /// </summary>
+        /// <param name="_params">UInt256String; bool(verbose); waitBlockCount</param>
+        /// <returns></returns>
+        /// <exception cref="RpcException"></exception>
+        [RpcMethod]
+        protected virtual JToken AwaitConfirmedTransaction(JArray _params)
+        {
+            UInt256 hash = UInt256.Parse(_params[0].AsString());
+            bool verbose = _params.Count >= 2 && _params[1].AsBoolean();
+            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2].AsString()) : 2;
+            JToken json = GetConfirmedTransaction(hash, verbose);
+            if (json != null)
+            {
+                return json;
+            }
+            uint count = 1;
+            bool expectBlockIn15Secs = false;
+            CommittedHandler getConfirmedTransactionAfterCommitted = delegate(NeoSystem @system, Block @block){ count += 1; expectBlockIn15Secs = true; json = GetConfirmedTransaction(hash, verbose); };
+            Blockchain.Committed += getConfirmedTransactionAfterCommitted;
+            while (count <= waitBlockCount)
+            {
+                if (expectBlockIn15Secs == false)
+                    Thread.Sleep(500);
+                else
+                {
+                    expectBlockIn15Secs = false;
+                    Thread.Sleep(14500);
+                }
+                if (json != null)
+                {
+                    Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
+                    return json;
+                }
+            }
+            Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
+            throw new RpcException(-100, $"Transaction not found in {waitBlockCount} blocks");
         }
 
         [RpcMethod]
@@ -158,7 +199,7 @@ namespace Neo.Plugins
             return SetTokenBalance(session, contract, account, balance, prefix);
         }
 
-        private JObject SetTokenBalance(string session, UInt160 contract, UInt160 account, ulong balance, byte prefixAccount)
+        protected JObject SetTokenBalance(string session, UInt160 contract, UInt160 account, ulong balance, byte prefixAccount)
         {
             byte[] balanceBytes = BitConverter.GetBytes(balance);
             FairyEngine oldEngine = sessionStringToFairySession[session].engine;
@@ -197,7 +238,62 @@ namespace Neo.Plugins
             }
         }
 
-        private static JObject ToJson(StackItem item, int max)
+        protected JToken GetConfirmedTransaction(UInt256 hash, bool verbose)
+        {
+            // Do not consider anything in MemPool, because they have not been confirmed
+            //if (system.MemPool.TryGetValue(hash, out Transaction tx) && !verbose)
+            //    return Convert.ToBase64String(tx.ToArray());
+            Transaction? tx = null;
+            DataCache snapshot = system.StoreView;
+            TransactionState state = NativeContract.Ledger.GetTransactionState(snapshot, hash);
+            tx ??= state?.Transaction;
+            if (tx is null)
+            {
+                return null;
+            }
+            else
+            {
+                if (!verbose) return Convert.ToBase64String(tx.ToArray());
+                JObject json = TransactionToJson(tx, system.Settings);
+                if (state is not null)
+                {
+                    TrimmedBlock block = NativeContract.Ledger.GetTrimmedBlock(snapshot, NativeContract.Ledger.GetBlockHash(snapshot, state.BlockIndex));
+                    json["blockhash"] = block.Hash.ToString();
+                    json["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
+                    json["blocktime"] = block.Header.Timestamp;
+                }
+                return json;
+            }
+        }
+
+        protected static JObject BlockToJson(Block block, ProtocolSettings settings)
+        {
+            JObject json = block.ToJson(settings);
+            json["tx"] = block.Transactions.Select(p => TransactionToJson(p, settings)).ToArray();
+            return json;
+        }
+
+        protected static JObject TransactionToJson(Transaction tx, ProtocolSettings settings)
+        {
+            JObject json = tx.ToJson(settings);
+            json["sysfee"] = tx.SystemFee.ToString();
+            json["netfee"] = tx.NetworkFee.ToString();
+            return json;
+        }
+
+        protected static JObject NativeContractToJson(NativeContract contract, ProtocolSettings settings)
+        {
+            return new JObject
+            {
+                ["id"] = contract.Id,
+                ["hash"] = contract.Hash.ToString(),
+                ["nef"] = contract.Nef.ToJson(),
+                ["manifest"] = contract.Manifest.ToJson(),
+                ["updatehistory"] = settings.NativeUpdateHistory[contract.Name].Select(p => (JToken)p).ToArray()
+            };
+        }
+
+        protected static JObject ToJson(StackItem item, int max)
         {
             JObject json = item.ToJson();
             if (item is InteropInterface interopInterface && interopInterface.GetInterface<object>() is IIterator iterator)
@@ -214,7 +310,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        private static Signer[] SignersFromJson(JArray _params, ProtocolSettings settings)
+        protected static Signer[] SignersFromJson(JArray _params, ProtocolSettings settings)
         {
             var ret = _params.Select(u => new Signer
             {
@@ -232,7 +328,7 @@ namespace Neo.Plugins
             return ret;
         }
 
-        private static Witness[] WitnessesFromJson(JArray _params)
+        protected static Witness[] WitnessesFromJson(JArray _params)
         {
             return _params.Select(u => new
             {
@@ -245,7 +341,7 @@ namespace Neo.Plugins
             }).ToArray();
         }
 
-        static string? GetExceptionMessage(Exception exception)
+        protected static string? GetExceptionMessage(Exception exception)
         {
             var baseException = exception?.GetBaseException();
             string returned;
