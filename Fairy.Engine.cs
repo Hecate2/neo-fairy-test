@@ -4,7 +4,7 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
-using System.Collections.Concurrent;
+using Neo.Wallets;
 using System.Numerics;
 using System.Reflection;
 
@@ -15,25 +15,33 @@ namespace Neo.Plugins
         public class FairyEngine : ApplicationEngine
         {
             readonly Fairy fairy;
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null, Fairy? fairy = null) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
             {
+                if (fairy != null)
+                    this.fairy = fairy;
                 if (oldEngine != null)
                 {
-                    this.services = oldEngine.services;
-                    this.serviceArgs = oldEngine.serviceArgs;
+                    if (copyRuntimeArgs)
+                    {
+                        this.services = oldEngine.services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);  // clone
+                        this.runtimeArgs = (RuntimeArgs)oldEngine.runtimeArgs.Clone();
+                    }
+                    else
+                    {
+                        this.services = oldEngine.services;
+                        this.runtimeArgs = oldEngine.runtimeArgs;
+                    }
                 }
                 else
                 {
-                    this.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    this.serviceArgs = new ServiceArgs();
+                    this.services = ApplicationEngine.Services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);
+                    this.runtimeArgs = new RuntimeArgs(fairy.defaultFairyWallet);
                 }
-                if (fairy != null)
-                    this.fairy = fairy;
             }
 
-            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null)
+            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false)
             {
-                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy);
+                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy, copyRuntimeArgs: copyRuntimeArgs);
             }
 
             public new VMState State
@@ -68,10 +76,10 @@ namespace Neo.Plugins
                 return State;
             }
 
-            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null)
+            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false)
             {
                 persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
-                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy);
+                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy, copyRuntimeArgs: copyRuntimeArgs);
                 engine.LoadScript(script, initialPosition: offset);
                 engine.Execute();
                 return engine;
@@ -79,13 +87,20 @@ namespace Neo.Plugins
 
             public Dictionary<uint, InteropDescriptor> services;
 
-            public class ServiceArgs
+            public class RuntimeArgs: ICloneable
             {
+                public RuntimeArgs(Wallet fairyWallet)
+                {
+                    this.fairyWallet = fairyWallet;
+                }
+                public Wallet fairyWallet;
                 public ulong? timestamp = null;
                 public BigInteger? designatedRandom = null;
+
+                public object Clone() => MemberwiseClone();
                 //public uint? blockIndex = null;
             }
-            public ServiceArgs serviceArgs;
+            public RuntimeArgs runtimeArgs;
 
             protected override void OnSysCall(uint method)
             {
@@ -107,9 +122,9 @@ namespace Neo.Plugins
             }
 
             public new BigInteger GetRandom() => base.GetRandom();
-            public BigInteger GetFairyRandom() => serviceArgs.designatedRandom != null ? (BigInteger)serviceArgs.designatedRandom : base.GetRandom();
+            public BigInteger GetFairyRandom() => runtimeArgs.designatedRandom != null ? (BigInteger)runtimeArgs.designatedRandom : base.GetRandom();
             public new ulong GetTime() => base.GetTime();
-            public ulong GetFairyTime() => serviceArgs.timestamp != null ? (ulong)serviceArgs.timestamp : GetTime();
+            public ulong GetFairyTime() => runtimeArgs.timestamp != null ? (ulong)runtimeArgs.timestamp : GetTime();
             //public ulong GetFairyBlockIndex() => serviceArgs.blockIndex != null ? (uint)serviceArgs.blockIndex : NativeContract.Ledger.CurrentIndex(this.Snapshot);
         }
 
@@ -213,17 +228,17 @@ namespace Neo.Plugins
 
             public ulong? timestamp
             {
-                get => engine.serviceArgs.timestamp;
+                get => engine.runtimeArgs.timestamp;
                 set
                 {
                     if (value == null)
                     {
                         engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
-                        engine.serviceArgs.timestamp = null;
+                        engine.runtimeArgs.timestamp = null;
                     }
                     else
                     {
-                        engine.serviceArgs.timestamp = value;
+                        engine.runtimeArgs.timestamp = value;
                         engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
                     }
                 }
@@ -231,17 +246,17 @@ namespace Neo.Plugins
 
             public BigInteger? designatedRandom
             {
-                get => engine.serviceArgs.designatedRandom;
+                get => engine.runtimeArgs.designatedRandom;
                 set
                 {
                     if (value == null)
                     {
                         engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
-                        engine.serviceArgs.designatedRandom = null;
+                        engine.runtimeArgs.designatedRandom = null;
                     }
                     else
                     {
-                        engine.serviceArgs.designatedRandom = value;
+                        engine.runtimeArgs.designatedRandom = value;
                         engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
                     }
                 }
@@ -249,7 +264,7 @@ namespace Neo.Plugins
 
             public void ResetServices()
             {
-                engine.serviceArgs = new();
+                engine.runtimeArgs = new(fairy.defaultFairyWallet);
                 engine.services = ApplicationEngine.Services.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                 ResetExpiration();
             }

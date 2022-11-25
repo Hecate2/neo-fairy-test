@@ -1,12 +1,13 @@
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.Wallets;
 using System.Numerics;
 using System.Collections.Concurrent;
+using Neo.Persistence;
 
 namespace Neo.Plugins
 {
@@ -150,7 +151,7 @@ namespace Neo.Plugins
                 }
                 foreach (LogEventArgs log in logs)
                 {
-                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash)?.Manifest.Name;
+                    string? contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash)?.Manifest.Name;
                     traceback += $"\r\n[{log.ScriptHash}] {contractName}: {log.Message}";
                 }
                 json["traceback"] = traceback;
@@ -165,14 +166,22 @@ namespace Neo.Plugins
             }
             if (newEngine.State != VMState.FAULT)
             {
-                ProcessInvokeWithWalletAndSnapshot(oldEngine.Snapshot, json, signers, block: CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp));
+                if (witnesses == null)
+                    ProcessInvokeWithWalletAndSnapshot(oldEngine, script, json, signers, block: CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp));
+                else
+                {
+                    Wallet signatureWallet = oldEngine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : oldEngine.runtimeArgs.fairyWallet;
+                    json["tx"] = Convert.ToBase64String(tx.ToArray());
+                    json["networkfee"] = defaultFairyWallet.CalculateNetworkFee(oldEngine.Snapshot, tx).ToString();
+                }
             }
             return json;
         }
 
-        private void ProcessInvokeWithWalletAndSnapshot(DataCache snapshot, JObject result, Signer[]? signers = null, Block block = null)
+        private void ProcessInvokeWithWalletAndSnapshot(FairyEngine engine, byte[] script, JObject result, Signer[]? signers = null, Block block = null)
         {
-            if (fairyWallet == null || signers == null) return;
+            Wallet signatureWallet = engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : engine.runtimeArgs.fairyWallet;
+            if (signatureWallet == null || signers == null) return;
 
             Signer[] witnessSigners = signers;
             if (witnessSigners.Length <= 0) return;
@@ -181,24 +190,28 @@ namespace Neo.Plugins
             Transaction tx;
             try
             {
-                tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), Convert.FromBase64String(result["script"].AsString()), sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
+                tx = signatureWallet.MakeTransaction(engine.Snapshot.CreateSnapshot(), script, sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
             }
             catch //(Exception e)
             {
                 // result["exception"] = GetExceptionMessage(e);
                 return;
             }
-            ContractParametersContext context = new(snapshot.CreateSnapshot(), tx, system.Settings.Network);
-            fairyWallet.Sign(context);
-            if (context.Completed)
+            DataCache snapshotForSignature = engine.Snapshot.CreateSnapshot();
+            ContractParametersContext context = new(snapshotForSignature, tx, system.Settings.Network);
+            signatureWallet.Sign(context);
+            try
             {
                 tx.Witnesses = context.GetWitnesses();
-                byte[] txBytes = tx.ToArray();
-                result["tx"] = Convert.ToBase64String(txBytes);
-                long networkfee = (fairyWallet ?? new DummyWallet(system.Settings)).CalculateNetworkFee(system.StoreView, txBytes.AsSerializable<Transaction>());
-                result["networkfee"] = networkfee.ToString();
             }
-            else
+            catch
+            {
+                // When no valid signature is given, we can only try to simulate a transaction with a single witness
+                tx.Witnesses = defaultWitness;
+            }
+            result["tx"] = Convert.ToBase64String(tx.ToArray());
+            result["networkfee"] = signatureWallet.CalculateNetworkFee(snapshotForSignature, tx).ToString();
+            if (!context.Completed)
             {
                 result["pendingsignature"] = context.ToJson();
             }

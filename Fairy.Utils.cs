@@ -19,11 +19,12 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject VirtualDeploy(JArray _params)
         {
-            if (fairyWallet == null)
+            if (defaultFairyWallet == null)
                 throw new Exception("Please open a wallet before deploying a contract.");
             string session = _params[0].AsString();
             NefFile nef = Convert.FromBase64String(_params[1].AsString()).AsSerializable<NefFile>();
             ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
+            Signer[] signers = SignersFromJson((JArray)_params[3], system.Settings);
             if (!sessionStringToFairySession.TryGetValue(session, out FairySession testSession))
             {
                 testSession = NewTestSession();
@@ -39,12 +40,12 @@ namespace Neo.Plugins
             JObject json = new();
             try
             {
-                Block dummyBlock = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: sessionStringToFairySession[session].engine.serviceArgs.timestamp);
-                Transaction tx = fairyWallet.MakeTransaction(snapshot.CreateSnapshot(), script, persistingBlock: dummyBlock);
-                json["gasconsumed"] = tx.SystemFee;
-                json["networkfee"] = tx.NetworkFee;
+                Block dummyBlock = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: sessionStringToFairySession[session].engine.runtimeArgs.timestamp);
+                Transaction tx = defaultFairyWallet.MakeTransaction(sessionStringToFairySession[session].engine.Snapshot, script, sender: signers[0].Account, persistingBlock: dummyBlock);
+                json["networkfee"] = tx.NetworkFee.ToString();
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
                 sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine, fairy: this);
+                json["gasconsumed"] = sessionStringToFairySession[session].engine.GasConsumed.ToString();
                 json[session] = hash.ToString();
             }
             catch (InvalidOperationException ex)
