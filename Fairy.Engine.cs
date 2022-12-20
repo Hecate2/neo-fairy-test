@@ -296,7 +296,7 @@ namespace Neo.Plugins
                 timer = new(OnTimer, null, settings.SessionExpirationTime.Milliseconds, 60000);
         }
 
-        internal void OnTimer(object state)
+        internal void OnTimer(object? state)
         {
             List<(string Id, FairySession Session)> toBeDestroyed = new();
             foreach (var (id, session) in sessionStringToFairySession)

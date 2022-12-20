@@ -83,19 +83,14 @@ namespace Neo.Plugins
             {
                 return json;
             }
-            uint count = 1;
-            bool expectBlockIn15Secs = false;
-            CommittedHandler getConfirmedTransactionAfterCommitted = delegate(NeoSystem @system, Block @block){ count += 1; expectBlockIn15Secs = true; json = GetConfirmedTransaction(hash, verbose); };
+            SemaphoreSlim signal = new SemaphoreSlim(0, 1);
+            uint count = 0;
+            CommittedHandler getConfirmedTransactionAfterCommitted = delegate(NeoSystem @system, Block @block){ json = GetConfirmedTransaction(hash, verbose); count += 1; signal.Release(); };
             Blockchain.Committed += getConfirmedTransactionAfterCommitted;
-            while (count <= waitBlockCount)
+            while (count < waitBlockCount)
             {
-                if (expectBlockIn15Secs == false)
-                    Thread.Sleep(500);
-                else
-                {
-                    expectBlockIn15Secs = false;
-                    Thread.Sleep(14500);
-                }
+                signal.Wait();
+                Console.WriteLine(signal.CurrentCount);
                 if (json != null)
                 {
                     Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
