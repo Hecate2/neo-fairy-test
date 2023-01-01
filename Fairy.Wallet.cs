@@ -3,7 +3,6 @@ using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
-using Neo.Wallets.SQLite;
 using static System.IO.Path;
 
 namespace Neo.Plugins
@@ -89,11 +88,6 @@ namespace Neo.Plugins
             if (!File.Exists(path)) throw new FileNotFoundException();
             switch (GetExtension(path))
             {
-                case ".db3":
-                    {
-                        defaultFairyWallet = UserWallet.Open(path, password, system.Settings);
-                        break;
-                    }
                 case ".json":
                     {
                         NEP6Wallet nep6wallet = new(path, password, system.Settings);
