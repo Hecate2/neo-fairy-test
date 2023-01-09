@@ -35,6 +35,7 @@ namespace Neo.Plugins
             this.system = system;
             fairy = new(system, s);
             fairy.StartRpcServer();
+            fairy.StartWebsocketServer();
         }
 
         [ConsoleCommand("fairy", Category = "Fairy Commands", Description = "List Fairy snapshots")]

@@ -80,9 +80,7 @@ namespace Neo.Plugins
             uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2].AsString()) : 2;
             JToken json = GetConfirmedTransaction(hash, verbose);
             if (json != null)
-            {
                 return json;
-            }
             SemaphoreSlim signal = new SemaphoreSlim(0, 1);
             uint count = 0;
             CommittedHandler getConfirmedTransactionAfterCommitted = delegate(NeoSystem @system, Block @block){ json = GetConfirmedTransaction(hash, verbose); count += 1; signal.Release(); };

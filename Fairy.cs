@@ -1,5 +1,4 @@
 using Neo.ConsoleService;
-using Neo.Wallets.NEP6;
 
 namespace Neo.Plugins
 {
@@ -12,6 +11,8 @@ namespace Neo.Plugins
         {
             this.system = system;
             this.settings = settings;
+            RegisterWebsocketMethods(this);
+            RegisterBlockchainEvents();
             ConsoleHelper.Info($"Fairy server running at {settings.BindAddress}:{settings.Port}.\nBy default, Fairy plugin should not be exposed to the public.");
             InitializeTimer();
             if (settings.SessionEnabled && settings.SessionExpirationTime.TotalMilliseconds > 0)
