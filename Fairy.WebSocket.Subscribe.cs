@@ -1,11 +1,7 @@
-using Akka.Configuration.Hocon;
-using Akka.Util.Internal;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using System.Net.WebSockets;
-using System.Security.Policy;
-using static Neo.Plugins.Fairy;
 
 namespace Neo.Plugins
 {

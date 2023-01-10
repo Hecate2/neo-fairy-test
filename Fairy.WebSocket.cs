@@ -12,7 +12,6 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using System.Net.WebSockets;
-using Akka.Configuration.Hocon;
 
 namespace Neo.Plugins
 {
@@ -20,8 +19,9 @@ namespace Neo.Plugins
     {
         public IWebHost websocketHost;
         public readonly Dictionary<string, WebSocket> sessionToWebSocket = new();
-        protected readonly Dictionary<string, Func<WebSocket, JArray, CancellationToken, object>> websocketMethods = new();
-        protected readonly Dictionary<string, Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>> websocketControlMethods = new();
+        protected readonly Dictionary<string, Func<JArray, object>> rpcMethods = new();
+        protected readonly Dictionary<string, Func<WebSocket, JArray, CancellationToken, object>> webSocketMethods = new();
+        protected readonly Dictionary<string, Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>> webSocketControlMethods = new();
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class WebsocketMethodAttribute : Attribute
@@ -42,15 +42,23 @@ namespace Neo.Plugins
                 WebsocketMethodAttribute attribute = method.GetCustomAttribute<WebsocketMethodAttribute>();
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
-                websocketMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, CancellationToken, object>>(handler);
+                webSocketMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, CancellationToken, object>>(handler);
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
                 WebsocketControlMethodAttribute attribute = method.GetCustomAttribute<WebsocketControlMethodAttribute>();
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
-                websocketControlMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>>(handler);
+                webSocketControlMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>>(handler);
             }
+            foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                RpcMethodAttribute attribute = method.GetCustomAttribute<RpcMethodAttribute>();
+                if (attribute is null) continue;
+                string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
+                rpcMethods[name] = method.CreateDelegate<Func<JArray, object>>(handler);
+            }
+
         }
 
         public void StartWebsocketServer()
@@ -139,13 +147,13 @@ namespace Neo.Plugins
                 }
                 string method = request["method"].AsString();
                 if (/*!CheckAuth(context) || */settings.DisabledMethods.Contains(method))
-                    throw new RpcException(-400, "Access denied");
+                    throw new RpcException(-400, "Method disabled by server settings");
                 JToken @params = request["params"] ?? new JArray();
-                if (websocketMethods.TryGetValue(method, out var func))
+                if (webSocketMethods.TryGetValue(method, out var wsFunc))
                 {
                     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
                     CancellationToken cancellationToken = cancellationTokenSource.Token;
-                    switch (func(webSocket, (JArray)@params, cancellationToken))
+                    switch (wsFunc(webSocket, (JArray)@params, cancellationToken))
                     {
                         case Action action:
                             Task.Run(action);
@@ -166,7 +174,7 @@ namespace Neo.Plugins
                             throw new NotSupportedException();
                     };
                 }
-                else if (websocketControlMethods.TryGetValue(method, out var controlFunc))
+                else if (webSocketControlMethods.TryGetValue(method, out var controlFunc))
                 {
                     switch (controlFunc(webSocket, (JArray)@params, webSocketSubscriptions))
                     {
@@ -176,6 +184,23 @@ namespace Neo.Plugins
                         default:
                             throw new NotSupportedException();
                     };
+                }
+                else if (rpcMethods.TryGetValue(method, out var rpcFunc))
+                {
+                    object rpcResult = rpcFunc((JArray)@params);
+                    if (request["needresponse"]?.AsBoolean() is true)
+                    {
+                        JObject response = new();
+                        response["jsonrpc"] = "2.0";
+                        response["id"] = (string)context.Request.Query["id"];
+                        response["result"] = rpcResult switch
+                        {
+                            JToken result => result,
+                            Task<JToken> task => await task,
+                            _ => throw new NotSupportedException()
+                        };
+                        await webSocket.SendAsync(response.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
+                    }
                 }
                 else
                     throw new RpcException(-32601, "Method not found");
