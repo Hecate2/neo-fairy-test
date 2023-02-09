@@ -17,6 +17,23 @@
         "DisabledMethods": [],
         "SessionEnabled": true,
         "SessionExpirationTime": 86400
+      },
+      { // ipv6 server
+        "Network": 860833102,
+        "BindAddress": "::",
+        "Port": 16868,
+        "SslCert": "",
+        "SslCertPassword": "",
+        "TrustedAuthorities": [],
+        "RpcUser": "",
+        "RpcPass": "",
+        "MaxGasInvoke": 200,
+        "MaxFee": 0.1,
+        "MaxConcurrentConnections": 40,
+        "MaxIteratorResultItems": 100,
+        "DisabledMethods": [],
+        "SessionEnabled": true,
+        "SessionExpirationTime": 86400
       }
     ]
   }
