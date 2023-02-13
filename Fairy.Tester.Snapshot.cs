@@ -1,4 +1,5 @@
 using Neo.Json;
+using Neo.Persistence;
 using System.Collections.Concurrent;
 
 namespace Neo.Plugins
@@ -6,11 +7,6 @@ namespace Neo.Plugins
     public partial class Fairy
     {
         public readonly ConcurrentDictionary<string, FairySession> sessionStringToFairySession = new();
-
-        public FairySession NewTestSession()
-        {
-            return new FairySession(this);
-        }
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
@@ -28,7 +24,7 @@ namespace Neo.Plugins
                     json[session] = true;
                 else
                     json[session] = false;
-                sessionStringToFairySession[session] = NewTestSession();
+                sessionStringToFairySession[session] = NewFairySession(system, this);
             }
             return json;
         }
@@ -73,7 +69,7 @@ namespace Neo.Plugins
         {
             string from = _params[0].AsString();
             string to = _params[1].AsString();
-            FairySession testSessionTo = NewTestSession();
+            FairySession testSessionTo = NewFairySession(system, this);
             testSessionTo.engine = BuildSnapshotWithDummyScript(sessionStringToFairySession[from].engine);
             testSessionTo.debugEngine = null;
             sessionStringToFairySession[to] = testSessionTo;

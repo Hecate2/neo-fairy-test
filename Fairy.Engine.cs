@@ -12,6 +12,20 @@ namespace Neo.Plugins
 {
     public partial class Fairy
     {
+        public static FairySession NewFairySession(NeoSystem system, Fairy? fairy = null, DataCache? snapshot = null)
+        {
+            if (fairy == null)
+                fairy = new(system, settings: RpcServerSettings.Default);
+            return new FairySession(fairy, snapshot);
+        }
+
+        public static FairyEngine NewFairyEngine(NeoSystem system, Fairy? fairy = null, DataCache? snapshot = null)
+        {
+            if (fairy == null)
+                fairy = new(system, settings: RpcServerSettings.Default);
+            return Fairy.FairyEngine.Run(new byte[] { 0x40 }, snapshot == null ? fairy.system.StoreView : snapshot, fairy, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
+        }
+
         public class FairyEngine : ApplicationEngine
         {
             readonly Fairy fairy;
@@ -268,12 +282,12 @@ namespace Neo.Plugins
                 ResetExpiration();
             }
 
-            public FairySession(Fairy fairy)
+            public FairySession(Fairy fairy, DataCache? snapshot = null)
             {
                 this.fairy = fairy;
                 system = fairy.system;
                 settings = fairy.system.Settings;
-                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, fairy, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
+                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, snapshot is null ? fairy.system.StoreView : snapshot, fairy, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
             }
 
             public void ResetExpiration()

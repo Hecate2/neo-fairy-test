@@ -27,7 +27,7 @@ namespace Neo.Plugins
             Signer[] signers = SignersFromJson((JArray)_params[3], system.Settings);
             if (!sessionStringToFairySession.TryGetValue(session, out FairySession testSession))
             {
-                testSession = NewTestSession();
+                testSession = NewFairySession(system, this);
                 sessionStringToFairySession[session] = testSession;
             }
             DataCache snapshot = testSession.engine.Snapshot;

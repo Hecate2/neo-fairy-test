@@ -82,7 +82,7 @@ namespace Neo.Plugins
             FairySession testSession;
             if (!sessionStringToFairySession.TryGetValue(session, out testSession))
             {  // we allow initializing a new session when executing
-                testSession = NewTestSession();
+                testSession = NewFairySession(system, this);
                 sessionStringToFairySession[session] = testSession;
             }
             FairyEngine oldEngine = testSession.engine, newEngine;
