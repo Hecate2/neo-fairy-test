@@ -98,7 +98,7 @@ namespace Neo.Plugins
                 Witnesses = witnesses
             };
             FairyEngine.Log += CacheLog;
-            newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine, fairy: this);
+            newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             FairyEngine.Log -= CacheLog;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionStringToFairySession[session].engine = newEngine;

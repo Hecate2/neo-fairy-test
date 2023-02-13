@@ -15,10 +15,9 @@ namespace Neo.Plugins
         public class FairyEngine : ApplicationEngine
         {
             readonly Fairy fairy;
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, Fairy fairy, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
             {
-                if (fairy != null)
-                    this.fairy = fairy;
+                this.fairy = fairy;
                 if (oldEngine != null)
                 {
                     if (copyRuntimeArgs)
@@ -39,9 +38,9 @@ namespace Neo.Plugins
                 }
             }
 
-            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false)
+            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Fairy fairy, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
             {
-                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy, copyRuntimeArgs: copyRuntimeArgs);
+                return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, fairy, oldEngine: oldEngine, copyRuntimeArgs: copyRuntimeArgs);
             }
 
             public new VMState State
@@ -76,10 +75,10 @@ namespace Neo.Plugins
                 return State;
             }
 
-            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, Fairy? fairy = null, bool copyRuntimeArgs = false)
+            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, Fairy fairy, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
             {
                 persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
-                FairyEngine engine = Create(TriggerType.Application, container, snapshot, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, fairy: fairy, copyRuntimeArgs: copyRuntimeArgs);
+                FairyEngine engine = Create(TriggerType.Application, container, snapshot, fairy, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, copyRuntimeArgs: copyRuntimeArgs);
                 engine.LoadScript(script, initialPosition: offset);
                 engine.Execute();
                 return engine;
@@ -274,7 +273,7 @@ namespace Neo.Plugins
                 this.fairy = fairy;
                 system = fairy.system;
                 settings = fairy.system.Settings;
-                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke, fairy: fairy);
+                _engine = Fairy.FairyEngine.Run(new byte[] { 0x40 }, fairy.system.StoreView, fairy, settings: fairy.system.Settings, gas: fairy.settings.MaxGasInvoke);
             }
 
             public void ResetExpiration()

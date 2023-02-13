@@ -44,7 +44,7 @@ namespace Neo.Plugins
                 Transaction tx = defaultFairyWallet.MakeTransaction(sessionStringToFairySession[session].engine.Snapshot, script, sender: signers[0].Account, persistingBlock: dummyBlock);
                 json["networkfee"] = tx.NetworkFee.ToString();
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
-                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine, fairy: this);
+                sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), this, persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine);
                 json["gasconsumed"] = sessionStringToFairySession[session].engine.GasConsumed.ToString();
                 json[session] = hash.ToString();
             }
@@ -159,7 +159,7 @@ namespace Neo.Plugins
             if (_params.Count >= 1)
                 json["time"] = sessionStringToFairySession[_params[0].AsString()].engine.GetFairyTime();  // usually you can use GetSnapshotTimeStamp instead of this method
             else
-                json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke, fairy: this).GetTime();
+                json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke).GetTime();
             return json;
         }
 

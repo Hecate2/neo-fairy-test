@@ -14,7 +14,7 @@ namespace Neo.Plugins
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
-            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, fairy: this, copyRuntimeArgs: true);
+            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);
         }
 
         [RpcMethod]
