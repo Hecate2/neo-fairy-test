@@ -18,10 +18,16 @@ namespace Neo.Plugins
     public partial class Fairy : RpcServer
     {
         public IWebHost websocketHost;
-        public readonly Dictionary<string, WebSocket> sessionToWebSocket = new();
         protected readonly Dictionary<string, Func<JArray, object>> rpcMethods = new();
+        protected readonly Dictionary<string, Func<WebSocket, JArray, object>> webSocketNeoGoCompatibleMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, CancellationToken, object>> webSocketMethods = new();
-        protected readonly Dictionary<string, Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>> webSocketControlMethods = new();
+        protected readonly Dictionary<string, Func<WebSocket, JArray, LinkedList<object>, object>> webSocketControlMethods = new();
+
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class WebsocketNeoGoCompatibleMethodAttribute : Attribute
+        {
+            public string Name { get; set; }
+        }
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class WebsocketMethodAttribute : Attribute
@@ -39,6 +45,13 @@ namespace Neo.Plugins
         {
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
+                WebsocketNeoGoCompatibleMethodAttribute attribute = method.GetCustomAttribute<WebsocketNeoGoCompatibleMethodAttribute>();
+                if (attribute is null) continue;
+                string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
+                webSocketNeoGoCompatibleMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, object>>(handler);
+            }
+            foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
                 WebsocketMethodAttribute attribute = method.GetCustomAttribute<WebsocketMethodAttribute>();
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
@@ -49,7 +62,7 @@ namespace Neo.Plugins
                 WebsocketControlMethodAttribute attribute = method.GetCustomAttribute<WebsocketControlMethodAttribute>();
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
-                webSocketControlMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, LinkedList<WebSocketSubscription>, object>>(handler);
+                webSocketControlMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, LinkedList<object>, object>>(handler);
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
@@ -122,7 +135,7 @@ namespace Neo.Plugins
             using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
             byte[] buffer = new byte[4*1024];
 
-            LinkedList<WebSocketSubscription> webSocketSubscriptions = new();
+            LinkedList<object> webSocketSubscriptions = new();
 
             while (true)
             {
@@ -149,7 +162,28 @@ namespace Neo.Plugins
                 if (/*!CheckAuth(context) || */settings.DisabledMethods.Contains(method))
                     throw new RpcException(-400, "Method disabled by server settings");
                 JToken @params = request["params"] ?? new JArray();
-                if (webSocketMethods.TryGetValue(method, out var wsFunc))
+                if (webSocketNeoGoCompatibleMethods.TryGetValue(method, out var wsFuncNeoGoCompatible))
+                {
+                    JObject response = new();
+                    response["jsonrpc"] = "2.0";
+                    response["id"] = (string)context.Request.Query["id"];
+                    switch (wsFuncNeoGoCompatible(webSocket, (JArray)@params))
+                    {
+                        case uint subscriptionId:
+                            subscriptionIdSemaphore.Release();
+                            webSocketSubscriptions.AddLast(idToSubscriptions[subscriptionId]);
+                            response["result"] = subscriptionId.ToString("x");
+                            await webSocket.SendAsync(response.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
+                            break;
+                        case bool unsubscribeResult:
+                            response["result"] = unsubscribeResult;
+                            await webSocket.SendAsync(response.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    };
+                }
+                else if (webSocketMethods.TryGetValue(method, out var wsFunc))
                 {
                     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
                     CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -167,7 +201,7 @@ namespace Neo.Plugins
                                 await webSocket.SendAsync(response.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
                             }
                             break;
-                        case JObject result:
+                        case JToken result:
                             await webSocket.SendAsync(result.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
                             break;
                         default:
@@ -178,7 +212,7 @@ namespace Neo.Plugins
                 {
                     switch (controlFunc(webSocket, (JArray)@params, webSocketSubscriptions))
                     {
-                        case JObject result:
+                        case JToken result:
                             await webSocket.SendAsync(result.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
                             break;
                         default:

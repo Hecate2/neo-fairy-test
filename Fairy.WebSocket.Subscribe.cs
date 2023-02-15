@@ -6,7 +6,6 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Net.WebSockets;
 
 namespace Neo.Plugins
@@ -44,27 +43,42 @@ namespace Neo.Plugins
         }
 
         [WebsocketControlMethod]
-        protected virtual JObject UnsubscribeLastAction(WebSocket webSocket, JArray _params, LinkedList<WebSocketSubscription> webSocketSubscriptions)
+        protected virtual JToken UnsubscribeLastAction(WebSocket webSocket, JArray _params, LinkedList<object> webSocketSubscriptions)
         {
-            WebSocketSubscription webSocketSubscription = webSocketSubscriptions.Last.Value;
-            webSocketSubscription.cancellationTokenSource.Cancel();
-            webSocketSubscriptions.RemoveLast();
-            return webSocketSubscription.ToJson();
+            object o = webSocketSubscriptions.Last.Value;
+            if (o is WebSocketSubscription)
+            {
+                WebSocketSubscription webSocketSubscription = (WebSocketSubscription)o;
+                webSocketSubscription.cancellationTokenSource.Cancel();
+                webSocketSubscriptions.RemoveLast();
+                return webSocketSubscription.ToJson();
+            }
+            else if (o is WebSocketSubscriptionNeoGoCompatible)
+            {
+                WebSocketSubscriptionNeoGoCompatible webSocketSubscriptionNeoGoCompatible = (WebSocketSubscriptionNeoGoCompatible)o;
+                JArray subscriptionId = new JArray();
+                subscriptionId.Add(webSocketSubscriptionNeoGoCompatible.subscriptionId.ToString("x"));
+                Unsubscribe(webSocket, subscriptionId);
+                return webSocketSubscriptionNeoGoCompatible.ToJson();
+            }
+            else
+                throw new NotImplementedException(webSocketSubscriptions.ToString());
         }
 
         [WebsocketControlMethod]
-        protected virtual JToken UnsubscribeMethod(WebSocket webSocket, JArray _params, LinkedList<WebSocketSubscription> webSocketSubscriptions)
+        protected virtual JToken UnsubscribeMethod(WebSocket webSocket, JArray _params, LinkedList<object> webSocketSubscriptions)
         {
             string method = _params[0].AsString();
             JArray returned = new();
-            LinkedListNode<WebSocketSubscription>? node = webSocketSubscriptions.Last;
+            LinkedListNode<object>? node = webSocketSubscriptions.Last;
             while (node != null)
             {
-                if (node.Value.method == method)
+                if (node is LinkedListNode<WebSocketSubscription> && ((WebSocketSubscription)node.Value).method == method)
                 {
                     webSocketSubscriptions.Remove(node);
-                    node.Value.cancellationTokenSource.Cancel();
-                    returned.Add(node.Value.ToJson());
+                    WebSocketSubscription value = (WebSocketSubscription)node.Value;
+                    value.cancellationTokenSource.Cancel();
+                    returned.Add(value.ToJson());
                     node = node.Previous;
                 }
             }
