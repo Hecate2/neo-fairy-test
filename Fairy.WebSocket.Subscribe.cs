@@ -10,13 +10,13 @@ namespace Neo.Plugins
     {
         protected Block committedBlock;
         protected ConcurrentDictionary<SemaphoreSlim, WebSocket> committedBlockSemaphores = new();
+        List<SemaphoreSlim> keysToRemove = new();
 
         protected void RegisterBlockchainEvents()
         {
             Blockchain.Committed += delegate (NeoSystem @system, Block @block)
             {
                 committedBlock = block;
-                List<SemaphoreSlim> keysToRemove = new();
                 foreach (var item in committedBlockSemaphores)
                     if (item.Value.State == WebSocketState.Open)
                         item.Key.Release();
@@ -24,6 +24,7 @@ namespace Neo.Plugins
                         keysToRemove.Add(item.Key);
                 foreach (SemaphoreSlim key in keysToRemove)
                     committedBlockSemaphores.TryRemove(key, out _);
+                keysToRemove.Clear();
             };
         }
 
