@@ -105,8 +105,17 @@ namespace Neo.Plugins
 
             JObject json = new();
 
+            JArray notifications = new();
             for (int i = newEngine.Notifications.Count - 1; i >= 0; i--)
             {
+                NotifyEventArgs notification = newEngine.Notifications[i];
+                JObject notificationJson = new();
+                notificationJson["tx"] = notification.ScriptContainer.Hash.ToString();
+                notificationJson["scripthash"] = notification.ScriptHash.ToString();
+                notificationJson["contractname"] = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, notification.ScriptHash)?.Manifest.Name;
+                notificationJson["eventname"] = notification.EventName;
+                notificationJson["eventargs"] = notification.State.ToJson();
+                notifications.Add(notificationJson);
                 if(newEngine.Notifications[i].EventName == "OracleRequest")
                 {
                     int oracleContractId = NativeContract.Oracle.Id;
@@ -132,6 +141,7 @@ namespace Neo.Plugins
                     oracleRequests.Add(oracleRequest.ToStackItem(new ReferenceCounter()).ToJson());
                 }
             }
+            if (notifications.Count > 0) json["notifications"] = notifications;
 
             json["script"] = Convert.ToBase64String(script);
             json["state"] = newEngine.State;
