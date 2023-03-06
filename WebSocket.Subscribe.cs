@@ -282,14 +282,14 @@ namespace Neo.Plugins
             subscriptionId += 1;
             // subscriptionIdSemaphore.Release();  // after return
 
-            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = (JObject)_params[1] };
+            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1] : new JObject() };
             methodNameToSubscriptions[methodName].TryAdd(subscription);
             idToSubscriptions[newId] = subscription;
             return newId;
         }
 
         [WebsocketNeoGoCompatibleMethod]
-        protected virtual bool Unsubscribe(WebSocket webSocket, JArray _params)
+        protected virtual object Unsubscribe(WebSocket webSocket, JArray _params)
         {
             foreach (JToken param in _params)
             {
