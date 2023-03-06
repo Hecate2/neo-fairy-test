@@ -1,4 +1,3 @@
-using Akka.Util;
 using Neo;
 using Neo.IO;
 using Neo.Json;
@@ -17,7 +16,7 @@ namespace Neo.Plugins
     {
         protected uint subscriptionId = 0;
         protected SemaphoreSlim subscriptionIdSemaphore = new(1);
-        protected Dictionary<string, ConcurrentSet<WebSocketSubscriptionNeoGoCompatible>> methodNameToSubscriptions = new();
+        protected Dictionary<string, HashSet<WebSocketSubscriptionNeoGoCompatible>> methodNameToSubscriptions = new();
         protected ConcurrentDictionary<uint, WebSocketSubscriptionNeoGoCompatible> idToSubscriptions = new();
 
         public struct WebSocketSubscriptionNeoGoCompatible
@@ -54,7 +53,7 @@ namespace Neo.Plugins
         {
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in subscriptionsToClose)
             {
-                methodNameToSubscriptions[subscription.method].TryRemove(subscription);
+                methodNameToSubscriptions[subscription.method].Remove(subscription);
                 idToSubscriptions.TryRemove(subscription.subscriptionId, out _);
                 subscription.webSocket.Dispose();
             }
@@ -92,7 +91,7 @@ namespace Neo.Plugins
 
         protected async void OnBlockAdded(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
         {
-            ConcurrentSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
+            HashSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
             ConcurrentQueue<Task> webSocketTasks = new();
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["block_added"])
             {
@@ -100,7 +99,7 @@ namespace Neo.Plugins
                 if (_params.ContainsProperty("till") && _params["till"].AsNumber() < block.Index)
                 {
                     // close this subscription, because it is impossible to have later blocks fulfilling the "till" criteria
-                    subscriptionsToClose.TryAdd(subscription);
+                    subscriptionsToClose.Add(subscription);
                     continue;
                 }
                 if (_params.ContainsProperty("primary") && _params["primary"].AsNumber() != block.PrimaryIndex) continue;
@@ -114,7 +113,7 @@ namespace Neo.Plugins
                 webSocketTasks.Append(Task.Run(async () =>
                 {
                     if (await WebSocketSendAsync(subscription, returnedJson))
-                        subscriptionsToClose.TryAdd(subscription);
+                        subscriptionsToClose.Add(subscription);
                 }));
             }
             await Task.WhenAll(webSocketTasks);
@@ -123,7 +122,7 @@ namespace Neo.Plugins
 
         protected async void OnTransactionAdded(object? sender, Transaction tx)
         {
-            ConcurrentSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
+            HashSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
             ConcurrentQueue<Task> webSocketTasks = new();
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["transaction_added"])
             {
@@ -155,7 +154,7 @@ namespace Neo.Plugins
                 webSocketTasks.Append(Task.Run(async () =>
                 {
                     if (await WebSocketSendAsync(subscription, returnedJson))
-                        subscriptionsToClose.TryAdd(subscription);
+                        subscriptionsToClose.Add(subscription);
                 }));
             }
             await Task.WhenAll(webSocketTasks);
@@ -164,7 +163,7 @@ namespace Neo.Plugins
 
         protected async void OnNotification(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
         {
-            ConcurrentSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
+            HashSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
             ConcurrentQueue<Task> webSocketTasks = new();
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["notification_from_execution"])
             {
@@ -202,7 +201,7 @@ namespace Neo.Plugins
                         webSocketTasks.Append(Task.Run(async () =>
                         {
                             if (await WebSocketSendAsync(subscription, returnedJson))
-                                subscriptionsToClose.TryAdd(subscription);
+                                subscriptionsToClose.Add(subscription);
                         }));
                     }
                 }
@@ -213,7 +212,7 @@ namespace Neo.Plugins
 
         protected async void OnTransactionExecuted(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
         {
-            ConcurrentSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
+            HashSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
             ConcurrentQueue<Task> webSocketTasks = new();
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["transaction_executed"])
             {
@@ -233,7 +232,7 @@ namespace Neo.Plugins
 
                         if (wantedTxOrBlockUInt256 == block.Hash)
                         {
-                            subscriptionsToClose.TryAdd(subscription);  // impossble to have another container of the same hash; remove subscription
+                            subscriptionsToClose.Add(subscription);  // impossble to have another container of the same hash; remove subscription
                             if (_params.ContainsProperty("state") && _params["state"].AsString() != Enum.GetName(app.VMState))
                                 continue;
                             else
@@ -241,7 +240,7 @@ namespace Neo.Plugins
                         }
                         if (wantedTxOrBlockUInt256 == app.Transaction?.Hash)
                         {
-                            subscriptionsToClose.TryAdd(subscription);  // impossble to have another container of the same hash; remove subscription
+                            subscriptionsToClose.Add(subscription);  // impossble to have another container of the same hash; remove subscription
                             if (_params.ContainsProperty("state") && _params["state"].AsString() != Enum.GetName(app.VMState))
                                 continue;
                             else
@@ -263,7 +262,7 @@ namespace Neo.Plugins
                     webSocketTasks.Append(Task.Run(async () =>
                     {
                         if (await WebSocketSendAsync(subscription, returnedJson))
-                            subscriptionsToClose.TryAdd(subscription);
+                            subscriptionsToClose.Add(subscription);
                     }));
                 }
             }
@@ -283,7 +282,7 @@ namespace Neo.Plugins
             // subscriptionIdSemaphore.Release();  // after return
 
             WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1] : new JObject() };
-            methodNameToSubscriptions[methodName].TryAdd(subscription);
+            methodNameToSubscriptions[methodName].Add(subscription);
             idToSubscriptions[newId] = subscription;
             return newId;
         }
@@ -297,7 +296,7 @@ namespace Neo.Plugins
                 if (!idToSubscriptions.ContainsKey(subscriptionId))
                     throw new ArgumentException($"{subscriptionId}");
                 idToSubscriptions.Remove(subscriptionId, out WebSocketSubscriptionNeoGoCompatible subscription);
-                methodNameToSubscriptions[subscription.method].TryRemove(subscription);
+                methodNameToSubscriptions[subscription.method].Remove(subscription);
             }
             return true;
         }
