@@ -107,7 +107,7 @@ namespace Neo.Plugins
 
                 JObject returnedJson = new();
                 returnedJson["jsonrpc"] = "2.0";
-                returnedJson["method"] = "transaction_added";
+                returnedJson["method"] = "block_added";
                 JArray @params = new() { block.ToJson(system.Settings) };
                 returnedJson["params"] = @params;
                 webSocketTasks.Append(Task.Run(async () =>
