@@ -156,7 +156,9 @@ namespace Neo.Plugins
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
                 {
-                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
+                    UInt160 contextScriptHash = context.GetScriptHash();
+                    string? contextContractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, contextScriptHash)?.Manifest.Name;
+                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
                 }
                 if(!logs.IsEmpty)
                 {
