@@ -66,6 +66,18 @@ namespace Neo.Plugins
             return json;
         }
 
+        [RpcMethod]
+        protected virtual JToken GetContract(JArray _params)
+        {
+            string? session = _params[0]?.AsString();
+            UInt160 hash = UInt160.Parse(_params[1].AsString());
+            ContractState contractState = NativeContract.ContractManagement.GetContract(
+                session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot,
+                hash);
+            return contractState.ToJson();
+        }
+
+
         /// <summary>
         /// Wait until the transaction is included in blocks
         /// </summary>
