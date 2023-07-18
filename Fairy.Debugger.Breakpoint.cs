@@ -160,6 +160,8 @@ namespace Neo.Plugins
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
             JArray breakpointList = new();
+            if (!contractScriptHashToSourceCodeBreakpoints.ContainsKey(scriptHash))
+                return breakpointList;
             if (_params.Count == 1)  // delete all breakpoints
             {
                 List<SourceFilenameAndLineNum> sourceCodeBreakpoints = contractScriptHashToSourceCodeBreakpoints[scriptHash].OrderBy(p => p.sourceFilename).ThenBy(p => p.lineNum).ToList();
