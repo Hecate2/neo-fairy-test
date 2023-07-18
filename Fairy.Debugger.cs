@@ -151,13 +151,14 @@ namespace Neo.Plugins
             actualBreakReason = BreakReason.None;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
                 return engine;
-            OpCode currentOpCode = engine.CurrentContext.CurrentInstruction.OpCode;
+            Instruction currentInstruction = engine.CurrentContext.CurrentInstruction ?? Instruction.RET;
+            OpCode currentOpCode = currentInstruction.OpCode;
             if ((requiredBreakReason & BreakReason.Call) > 0 &&
                (currentOpCode == OpCode.CALL || currentOpCode == OpCode.CALLA || currentOpCode == OpCode.CALLT || currentOpCode == OpCode.CALL_L
-             || (currentOpCode == OpCode.SYSCALL && engine.CurrentContext.CurrentInstruction.TokenU32 == ApplicationEngine.System_Contract_Call.Hash)))
+             || (currentOpCode == OpCode.SYSCALL && currentInstruction.TokenU32 == ApplicationEngine.System_Contract_Call.Hash)))
             {
                 engine.ExecuteNext();
-                if (engine.CurrentContext.CurrentInstruction.OpCode == OpCode.INITSLOT)
+                if (currentInstruction.OpCode == OpCode.INITSLOT)
                     engine.ExecuteNext();
                 else
                     return engine;
