@@ -29,7 +29,7 @@ namespace Neo.Plugins
             string operation = _params[3].AsString();
             ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
             Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 6 ? WitnessesFromJson((JArray)_params[5]) : null;
+            Witness[]? witnesses = _params.Count >= 7 ? WitnessesFromJson((JArray)_params[6]) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
@@ -200,7 +200,7 @@ namespace Neo.Plugins
                 {
                     Wallet signatureWallet = oldEngine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : oldEngine.runtimeArgs.fairyWallet;
                     json["tx"] = Convert.ToBase64String(tx.ToArray());
-                    json["networkfee"] = defaultFairyWallet.CalculateNetworkFee(oldEngine.Snapshot, tx).ToString();
+                    json["networkfee"] = signatureWallet.CalculateNetworkFee(oldEngine.Snapshot, tx).ToString();
                 }
             }
             return json;
