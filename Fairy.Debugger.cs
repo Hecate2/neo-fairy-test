@@ -96,7 +96,7 @@ namespace Neo.Plugins
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
             {
-                string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
+                string traceback = $"CallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack.Reverse())
                 {
@@ -114,6 +114,8 @@ namespace Neo.Plugins
                     //catch (Exception _) {; }
                     traceback += $"\r\n\tScriptHash={contextScriptHash}, InstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
+                traceback += $"\r\n{json["exception"].GetString()}";
+
                 if (!logs.IsEmpty)
                 {
                     traceback += $"\r\n-------Logs-------({logs.Count})";

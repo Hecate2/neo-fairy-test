@@ -149,7 +149,7 @@ namespace Neo.Plugins
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if(json["exception"] != null)
             {
-                string traceback = $"{json["exception"].GetString()}\r\n";
+                string traceback = "";
                 try { if (newEngine.CallingScriptHash != null) traceback += $"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"; } catch { }
                 try { traceback += $"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"; } catch { }
                 try { traceback += $"EntryScriptHash={newEngine.EntryScriptHash}\r\n"; } catch { }
@@ -171,7 +171,9 @@ namespace Neo.Plugins
                     //catch (Exception _) {; }
                     traceback += $"\r\n\tInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
                 }
-                if(!logs.IsEmpty)
+                traceback += $"\r\n{json["exception"].GetString()}";
+
+                if (!logs.IsEmpty)
                 {
                     traceback += $"\r\n-------Logs-------({logs.Count})";
                 }
