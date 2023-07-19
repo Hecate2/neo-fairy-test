@@ -98,16 +98,20 @@ namespace Neo.Plugins
             {
                 string traceback = $"{json["exception"].GetString()}\r\nCallingScriptHash={newEngine.CallingScriptHash}\r\nCurrentScriptHash={newEngine.CurrentScriptHash}\r\nEntryScriptHash={newEngine.EntryScriptHash}\r\n";
                 traceback += newEngine.FaultException.StackTrace;
-                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
+                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack.Reverse())
                 {
                     UInt160 contextScriptHash = context.GetScriptHash();
-                    try
+                    //try
                     {
-                        string sourceCodeTraceback = "";
-                        SourceFilenameAndLineNum sourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash][(uint)context.InstructionPointer];
-                        sourceCodeTraceback += $"\r\nFile {sourceCode.sourceFilename}, line {sourceCode.lineNum}: {sourceCode.sourceContent}";
-                        traceback += sourceCodeTraceback;
-                    }catch(Exception _) {; }
+                        if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(contextScriptHash) && contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash].ContainsKey((uint)context.InstructionPointer))
+                        {
+                            string sourceCodeTraceback = "";
+                            SourceFilenameAndLineNum sourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash][(uint)context.InstructionPointer];
+                            sourceCodeTraceback += $"\r\nFile {sourceCode.sourceFilename}, line {sourceCode.lineNum}: {sourceCode.sourceContent}";
+                            traceback += sourceCodeTraceback;
+                        }
+                    }
+                    //catch (Exception _) {; }
                     traceback += $"\r\n\tScriptHash={contextScriptHash}, InstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
                 if (!logs.IsEmpty)

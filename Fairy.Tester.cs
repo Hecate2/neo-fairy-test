@@ -154,11 +154,22 @@ namespace Neo.Plugins
                 try { traceback += $"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"; } catch { }
                 try { traceback += $"EntryScriptHash={newEngine.EntryScriptHash}\r\n"; } catch { }
                 traceback += newEngine.FaultException.StackTrace;
-                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack)
+                foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack.Reverse())
                 {
                     UInt160 contextScriptHash = context.GetScriptHash();
                     string? contextContractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, contextScriptHash)?.Manifest.Name;
-                    traceback += $"\r\nInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
+                    //try
+                    {
+                        if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(contextScriptHash) && contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash].ContainsKey((uint)context.InstructionPointer))
+                        {
+                            string sourceCodeTraceback = "";
+                            SourceFilenameAndLineNum sourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash][(uint)context.InstructionPointer];
+                            sourceCodeTraceback += $"\r\nFile {sourceCode.sourceFilename}, line {sourceCode.lineNum}: {sourceCode.sourceContent}";
+                            traceback += sourceCodeTraceback;
+                        }
+                    }
+                    //catch (Exception _) {; }
+                    traceback += $"\r\n\tInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
                 }
                 if(!logs.IsEmpty)
                 {
