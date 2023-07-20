@@ -74,7 +74,7 @@ namespace Neo.Plugins
                 base.ExecuteNext();
             }
 
-            public virtual VMState Execute()
+            public new VMState Execute()
             {
                 if (State == VMState.BREAK)
                     State = VMState.NONE;
