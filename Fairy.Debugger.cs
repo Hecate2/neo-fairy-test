@@ -398,7 +398,7 @@ namespace Neo.Plugins
             string session = _params[0].AsString();
             string variableName = _params[1].AsString();
             int invocationStackIndex = _params.Count > 2 ? int.Parse(_params[2].AsString()) : 0;
-            return GetVariableNamesAndValues(new JArray(session, invocationStackIndex))[variableName];
+            return GetVariableNamesAndValues(new JArray(session, invocationStackIndex))[variableName] ?? throw new ArgumentException($"Variable `{variableName}` not found.");
         }
 
         [RpcMethod]
