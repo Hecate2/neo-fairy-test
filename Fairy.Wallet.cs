@@ -1,6 +1,9 @@
+using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using static System.IO.Path;
@@ -143,6 +146,58 @@ namespace Neo.Plugins
             if (UInt160.TryParse(address, out var scriptHash))
                 return scriptHash;
             return address.ToScriptHash(version);
+        }
+
+        [RpcMethod]
+        protected virtual JObject ForceSignTransaction(JArray _params)
+        {
+            string session = _params[0].AsString();
+
+            FairySession fairySession;
+            if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
+            {  // we allow initializing a new session when executing
+                fairySession = NewFairySession(system, this);
+                sessionStringToFairySession[session] = fairySession;
+            }
+            Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
+            DataCache snapshotForSignature = fairySession.engine.Snapshot.CreateSnapshot();
+
+            byte[] script = Convert.FromBase64String(_params[1].AsString());
+            Signer[]? signers = _params.Count >= 3 ? SignersFromJson((JArray)_params[2], system.Settings) : null;
+            if (signers != null && (signers.Length > 1 || signers[0].Account != signatureWallet.GetAccounts().First().ScriptHash))
+                throw new("Multiple signature not supported by FairyWallet for now");
+            //JArray WIFprivateKeys = (JArray)_params[...];
+            long systemFee = _params.Count >= 4 ? long.Parse(_params[3].AsString()) : 1000_0000;
+            long? networkFee = _params.Count >= 5 ? long.Parse(_params[4].AsString()) : null;
+            uint validUntilBlock = _params.Count >= 6 ? uint.Parse(_params[5].AsString()) : NativeContract.Ledger.CurrentIndex(snapshotForSignature) + 5760;
+            uint nonce = _params.Count >= 7 ? uint.Parse(_params[6].AsString()) : (uint)new Random().Next();
+
+            Transaction tx = new()
+            {
+                Version = 0,
+                Nonce = nonce,
+                Script = script,
+                ValidUntilBlock = validUntilBlock,
+                Signers = signers,
+                Attributes = Array.Empty<TransactionAttribute>(),
+            };
+            tx.SystemFee = systemFee;
+            tx.NetworkFee = networkFee ?? signatureWallet.CalculateNetworkFee(snapshotForSignature, tx);
+
+            ContractParametersContext context = new(snapshotForSignature, tx, system.Settings.Network);
+            signatureWallet.Sign(context);
+            tx.Witnesses = context.GetWitnesses();
+
+            JObject result = new();
+            result["gasconsumed"] = systemFee;
+            result["tx"] = Convert.ToBase64String(tx.ToArray());
+            result["txHash"] = tx.Hash.ToString();
+            result["networkfee"] = tx.NetworkFee;
+            result["nonce"] = nonce;
+            result["witness"] = tx.Witnesses.Select(w => w.ToJson()).ToArray();
+            if (!context.Completed)
+                result["pendingsignature"] = context.ToJson();
+            return result;
         }
     }
 }
