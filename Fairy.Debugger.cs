@@ -79,14 +79,15 @@ namespace Neo.Plugins
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
             json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
-            try
+            if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(newEngine.CurrentScriptHash)
+                && contractScriptHashToAllInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash].ContainsKey((uint)newEngine.CurrentContext.InstructionPointer))
             {
                 SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
                 json["sourcefilename"] = sourceCodeBreakpoint.sourceFilename;
                 json["sourcelinenum"] = sourceCodeBreakpoint.lineNum;
                 json["sourcecontent"] = sourceCodeBreakpoint.sourceContent;
             }
-            catch
+            else
             {
                 json["sourcefilename"] = null;
                 json["sourcelinenum"] = null;
