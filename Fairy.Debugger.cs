@@ -72,17 +72,12 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private JObject DumpDebugResultJson(JObject json, FairyEngine newEngine, BreakReason breakReason)
+        private void GetSourceCode(JObject json, UInt160 scripthash, uint instructionPointer)
         {
-            json["state"] = newEngine.State;
-            json["breakreason"] = breakReason;
-            json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
-            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
-            json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
-            if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(newEngine.CurrentScriptHash)
-                && contractScriptHashToAllInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash].ContainsKey((uint)newEngine.CurrentContext.InstructionPointer))
+            if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(scripthash)
+                && contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash].ContainsKey(instructionPointer))
             {
-                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[newEngine.CurrentScriptHash][(uint)newEngine.CurrentContext.InstructionPointer];
+                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash][instructionPointer];
                 json["sourcefilename"] = sourceCodeBreakpoint.sourceFilename;
                 json["sourcelinenum"] = sourceCodeBreakpoint.lineNum;
                 json["sourcecontent"] = sourceCodeBreakpoint.sourceContent;
@@ -93,6 +88,16 @@ namespace Neo.Plugins
                 json["sourcelinenum"] = null;
                 json["sourcecontent"] = null;
             }
+        }
+
+        private JObject DumpDebugResultJson(JObject json, FairyEngine newEngine, BreakReason breakReason)
+        {
+            json["state"] = newEngine.State;
+            json["breakreason"] = breakReason;
+            json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
+            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
+            json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
+            GetSourceCode(json, newEngine.CurrentScriptHash, (uint)newEngine.CurrentContext.InstructionPointer);
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
@@ -380,7 +385,14 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
             FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
-            return new JArray(newEngine.InvocationStack.Select(p => ToJson(p.InstructionPointer, settings.MaxIteratorResultItems)));
+            return new JArray(newEngine.InvocationStack.Select(p =>
+            {
+                JObject json = new();
+                json["scripthash"] = p.GetScriptHash().ToString();
+                json["instructionpointer"] = p.InstructionPointer;
+                GetSourceCode(json, p.GetScriptHash(), (uint)p.InstructionPointer);
+                return json;
+            }));
         }
 
         [RpcMethod]
