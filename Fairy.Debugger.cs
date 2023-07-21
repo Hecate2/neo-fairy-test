@@ -298,11 +298,10 @@ namespace Neo.Plugins
                 {
                     if ((breakReason & BreakReason.AssemblyBreakpoint) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
                         break;
-                    if ((breakReason & BreakReason.SourceCode) > 0 && engine.InvocationStack.Count == invocationStackCount && engine.CurrentScriptHash == prevScriptHash)
+                    if ((breakReason & BreakReason.SourceCode) > 0 && (engine.InvocationStack.Count == invocationStackCount && engine.CurrentScriptHash == prevScriptHash || engine.InvocationStack.Count < invocationStackCount))
                         break;
-                }
-                else
                     engine.State = VMState.NONE;
+                }
             }
             return engine;
         }
