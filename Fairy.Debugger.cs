@@ -171,9 +171,7 @@ namespace Neo.Plugins
             {
                 engine.ExecuteNext();
                 if (currentInstruction.OpCode == OpCode.INITSLOT)
-                    engine.ExecuteNext();
-                else
-                    return engine;
+                    engine.ExecuteNext();  // Stopping at INITSLOT makes no good
                 engine.State = VMState.BREAK;
                 actualBreakReason |= BreakReason.Call;
                 return engine;
