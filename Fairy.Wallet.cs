@@ -1,3 +1,4 @@
+using Neo.Cryptography;
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -146,6 +147,25 @@ namespace Neo.Plugins
             if (UInt160.TryParse(address, out var scriptHash))
                 return scriptHash;
             return address.ToScriptHash(version);
+        }
+
+        [RpcMethod]
+        protected virtual JObject ForceSignMessage(JArray _params)
+        {
+            string session = _params[0].AsString();
+            FairySession fairySession;
+            if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
+            {  // we allow initializing a new session when executing
+                fairySession = NewFairySession(system, this);
+                sessionStringToFairySession[session] = fairySession;
+            }
+            Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
+            byte[] message = Convert.FromBase64String(_params[1].AsString());
+
+            JObject json = new();
+            KeyPair keyPair = signatureWallet.GetAccounts().First().GetKey();
+            json["signed"] = Convert.ToBase64String(Crypto.Sign(message, keyPair.PrivateKey, keyPair.PublicKey.EncodePoint(false)[1..]));
+            return json;
         }
 
         [RpcMethod]
