@@ -25,11 +25,7 @@ namespace Neo.Plugins
             NefFile nef = Convert.FromBase64String(_params[1].AsString()).AsSerializable<NefFile>();
             ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
             Signer[] signers = SignersFromJson((JArray)_params[3], system.Settings);
-            if (!sessionStringToFairySession.TryGetValue(session, out FairySession testSession))
-            {
-                testSession = NewFairySession(system, this);
-                sessionStringToFairySession[session] = testSession;
-            }
+            FairySession testSession = GetOrCreateFairySession(session);
             DataCache snapshot = testSession.engine.Snapshot;
             byte[] script;
             using (ScriptBuilder sb = new ScriptBuilder())

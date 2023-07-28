@@ -8,6 +8,17 @@ namespace Neo.Plugins
     {
         public readonly ConcurrentDictionary<string, FairySession> sessionStringToFairySession = new();
 
+        public FairySession GetOrCreateFairySession(string session)
+        {
+            FairySession fairySession;
+            if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
+            {  // we allow initializing a new session when executing
+                fairySession = NewFairySession(system, this);
+                sessionStringToFairySession[session] = fairySession;
+            }
+            return fairySession;
+        }
+
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
         {
             return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);

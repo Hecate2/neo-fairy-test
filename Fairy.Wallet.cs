@@ -153,12 +153,7 @@ namespace Neo.Plugins
         protected virtual JObject ForceSignMessage(JArray _params)
         {
             string session = _params[0].AsString();
-            FairySession fairySession;
-            if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
-            {  // we allow initializing a new session when executing
-                fairySession = NewFairySession(system, this);
-                sessionStringToFairySession[session] = fairySession;
-            }
+            FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
             byte[] message = Convert.FromBase64String(_params[1].AsString());
 
@@ -173,12 +168,7 @@ namespace Neo.Plugins
         {
             string session = _params[0].AsString();
 
-            FairySession fairySession;
-            if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
-            {  // we allow initializing a new session when executing
-                fairySession = NewFairySession(system, this);
-                sessionStringToFairySession[session] = fairySession;
-            }
+            FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
             DataCache snapshotForSignature = fairySession.engine.Snapshot.CreateSnapshot();
 

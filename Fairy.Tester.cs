@@ -79,12 +79,7 @@ namespace Neo.Plugins
 
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signer[]? signers = null, Witness[]? witnesses = null)
         {
-            FairySession testSession;
-            if (!sessionStringToFairySession.TryGetValue(session, out testSession))
-            {  // we allow initializing a new session when executing
-                testSession = NewFairySession(system, this);
-                sessionStringToFairySession[session] = testSession;
-            }
+            FairySession testSession = GetOrCreateFairySession(session);
             FairyEngine oldEngine = testSession.engine, newEngine;
             logs.Clear();
             Random random = new();

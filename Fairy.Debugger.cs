@@ -42,12 +42,7 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = witnesses,
             };
-            FairySession testSession;
-            if (!sessionStringToFairySession.TryGetValue(session, out testSession))
-            {  // we allow initializing a new session when executing
-                testSession = NewFairySession(system, this);
-                sessionStringToFairySession[session] = testSession;
-            }
+            FairySession testSession = GetOrCreateFairySession(session);
             FairyEngine newEngine;
             logs.Clear();
             FairyEngine.Log += CacheLog;
