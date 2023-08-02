@@ -80,7 +80,7 @@ namespace Neo.Plugins
                     State = VMState.NONE;
                 while (State != VMState.HALT && State != VMState.FAULT)
                 {
-                    uint currentInstructionPointer = (uint)this.CurrentContext.InstructionPointer;
+                    uint currentInstructionPointer = (uint)this.CurrentContext!.InstructionPointer;
                     UInt160 currentScripthash = this.CurrentScriptHash;
                     ExecuteNext();
                     if (currentScripthash != null && fairy.contractScriptHashToInstructionPointerToCoverage.ContainsKey(currentScripthash) && fairy.contractScriptHashToInstructionPointerToCoverage[currentScripthash].ContainsKey(currentInstructionPointer))
@@ -89,7 +89,7 @@ namespace Neo.Plugins
                 return State;
             }
 
-            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, Fairy fairy, IVerifiable container = null, Block persistingBlock = null, ProtocolSettings settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
+            public static FairyEngine Run(ReadOnlyMemory<byte> script, DataCache snapshot, Fairy fairy, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = TestModeGas, IDiagnostic? diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
             {
                 persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
                 FairyEngine engine = Create(TriggerType.Application, container, snapshot, fairy, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine, copyRuntimeArgs: copyRuntimeArgs);
@@ -144,7 +144,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetSnapshotTimestamp(JArray _params)
         {
-            string session = _params[0].AsString();
+            string session = _params[0]!.AsString();
             ulong? timestamp;
             if (_params[1] == null)
             {
@@ -153,7 +153,7 @@ namespace Neo.Plugins
             }
             else
             {
-                timestamp = ulong.Parse(_params[1].AsString());
+                timestamp = ulong.Parse(_params[1]!.AsString());
                 sessionStringToFairySession[session].timestamp = timestamp;
             }
             JObject json = new();
@@ -167,7 +167,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var s in _params)
             {
-                string session = s.AsString();
+                string session = s!.AsString();
                 json[session] = sessionStringToFairySession[session].timestamp;
             }
             return json;
@@ -176,7 +176,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetSnapshotRandom(JArray _params)
         {
-            string session = _params[0].AsString();
+            string session = _params[0]!.AsString();
             string? designatedRandomString = _params[1]?.AsString();
             FairySession fairySession = sessionStringToFairySession[session];
             if (designatedRandomString == null)
@@ -194,7 +194,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var s in _params)
             {
-                string session = s.AsString();
+                string session = s!.AsString();
                 if (sessionStringToFairySession.ContainsKey(session))
                     json[session] = sessionStringToFairySession[session].designatedRandom.ToString();
                 else
@@ -246,13 +246,13 @@ namespace Neo.Plugins
                 {
                     if (value == null)
                     {
-                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
+                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetTime))!, ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
                         engine.runtimeArgs.timestamp = null;
                     }
                     else
                     {
                         engine.runtimeArgs.timestamp = value;
-                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyTime)), ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
+                        engine.Register("System.Runtime.GetTime", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyTime))!, ApplicationEngine.System_Runtime_GetTime.Hash, 1 << 3, CallFlags.None);
                     }
                 }
             }
@@ -264,13 +264,13 @@ namespace Neo.Plugins
                 {
                     if (value == null)
                     {
-                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
+                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetRandom))!, ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
                         engine.runtimeArgs.designatedRandom = null;
                     }
                     else
                     {
                         engine.runtimeArgs.designatedRandom = value;
-                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom)), ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
+                        engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom))!, ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
                     }
                 }
             }

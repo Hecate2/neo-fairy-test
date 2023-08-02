@@ -8,7 +8,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject GetContractOpCodeCoverage(JArray _params)
         {
-            UInt160 scripthash = UInt160.Parse(_params[0].AsString());
+            UInt160 scripthash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToCoverage.ContainsKey(scripthash))
                 throw new ArgumentException($"Scripthash {scripthash} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             Dictionary<uint, bool> coverage = contractScriptHashToInstructionPointerToCoverage[scripthash];
@@ -21,7 +21,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject ClearContractOpCodeCoverage(JArray _params)
         {
-            UInt160 scripthash = UInt160.Parse(_params[0].AsString());
+            UInt160 scripthash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToCoverage.ContainsKey(scripthash))
                 throw new ArgumentException($"Scripthash {scripthash} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             Dictionary<uint, bool> coverage = contractScriptHashToInstructionPointerToCoverage[scripthash];

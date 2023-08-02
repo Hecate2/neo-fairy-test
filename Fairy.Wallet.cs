@@ -18,7 +18,7 @@ namespace Neo.Plugins
             public readonly Wallet wallet;
             public readonly KeyPair key;
             public readonly string nep2key;
-            public readonly string password;
+            public readonly string? password;
 
             public FairyAccount(Wallet wallet, UInt160 scriptHash, string nep2key, KeyPair key)
                 : base(scriptHash, wallet.ProtocolSettings)
@@ -71,7 +71,7 @@ namespace Neo.Plugins
             public override bool ChangePassword(string oldPassword, string newPassword) => throw new NotImplementedException();
             public override bool Contains(UInt160 scriptHash) => throw new NotImplementedException();
             public override WalletAccount CreateAccount(byte[] privateKey) => throw new NotImplementedException();
-            public override WalletAccount CreateAccount(Contract contract, KeyPair key = null) => throw new NotImplementedException();
+            public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null) => throw new NotImplementedException();
             public override WalletAccount CreateAccount(UInt160 scriptHash) => throw new NotImplementedException();
             public override void Delete() => throw new NotImplementedException();
             public override bool DeleteAccount(UInt160 scriptHash) => throw new NotImplementedException();
@@ -87,8 +87,8 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken OpenDefaultFairyWallet(JArray _params)
         {
-            string path = _params[0].AsString();
-            string password = _params[1].AsString();
+            string path = _params[0]!.AsString();
+            string password = _params[1]!.AsString();
             if (!File.Exists(path)) throw new FileNotFoundException();
             switch (GetExtension(path))
             {
@@ -117,10 +117,10 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetSessionFairyWalletWithNep2(JArray _params)
         {
-            string sessionString = _params[0].AsString();
+            string sessionString = _params[0]!.AsString();
             FairySession session = sessionStringToFairySession[sessionString];
-            string nep2 = _params[1].AsString();
-            string password = _params[2].AsString();
+            string nep2 = _params[1]!.AsString();
+            string password = _params[2]!.AsString();
             FairyWallet wallet = new FairyWallet(system.Settings, nep2:nep2, password:password);
             session.engine.runtimeArgs.fairyWallet = wallet;
             JObject json = new();
@@ -131,10 +131,10 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetSessionFairyWalletWithWif(JArray _params)
         {
-            string sessionString = _params[0].AsString();
+            string sessionString = _params[0]!.AsString();
             FairySession session = sessionStringToFairySession[sessionString];
-            string wif = _params.Count >= 2 ? _params[1].AsString() : "Fairy";
-            string password = _params.Count >= 3 ? _params[2].AsString() : "1";
+            string wif = _params.Count >= 2 ? _params[1]!.AsString() : "Fairy";
+            string password = _params.Count >= 3 ? _params[2]!.AsString() : "1";
             FairyWallet wallet = new FairyWallet(wif, password: password, system.Settings);
             session.engine.runtimeArgs.fairyWallet = wallet;
             JObject json = new();
@@ -152,10 +152,10 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject ForceSignMessage(JArray _params)
         {
-            string session = _params[0].AsString();
+            string session = _params[0]!.AsString();
             FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
-            byte[] message = Convert.FromBase64String(_params[1].AsString());
+            byte[] message = Convert.FromBase64String(_params[1]!.AsString());
 
             JObject json = new();
             KeyPair keyPair = signatureWallet.GetAccounts().First().GetKey();
@@ -166,21 +166,21 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject ForceSignTransaction(JArray _params)
         {
-            string session = _params[0].AsString();
+            string session = _params[0]!.AsString();
 
             FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
             DataCache snapshotForSignature = fairySession.engine.Snapshot.CreateSnapshot();
 
-            byte[] script = Convert.FromBase64String(_params[1].AsString());
-            Signer[]? signers = _params.Count >= 3 ? SignersFromJson((JArray)_params[2], system.Settings) : null;
+            byte[] script = Convert.FromBase64String(_params[1]!.AsString());
+            Signer[]? signers = _params.Count >= 3 ? SignersFromJson((JArray)_params[2]!, system.Settings) : null;
             if (signers != null && (signers.Length > 1 || signers[0].Account != signatureWallet.GetAccounts().First().ScriptHash))
                 throw new("Multiple signature not supported by FairyWallet for now");
             //JArray WIFprivateKeys = (JArray)_params[...];
-            long systemFee = _params.Count >= 4 ? long.Parse(_params[3].AsString()) : 1000_0000;
-            long? networkFee = _params.Count >= 5 ? long.Parse(_params[4].AsString()) : null;
-            uint validUntilBlock = _params.Count >= 6 ? uint.Parse(_params[5].AsString()) : NativeContract.Ledger.CurrentIndex(snapshotForSignature) + 5760;
-            uint nonce = _params.Count >= 7 ? uint.Parse(_params[6].AsString()) : (uint)new Random().Next();
+            long systemFee = _params.Count >= 4 ? long.Parse(_params[3]!.AsString()) : 1000_0000;
+            long? networkFee = _params.Count >= 5 ? long.Parse(_params[4]!.AsString()) : null;
+            uint validUntilBlock = _params.Count >= 6 ? uint.Parse(_params[5]!.AsString()) : NativeContract.Ledger.CurrentIndex(snapshotForSignature) + 5760;
+            uint nonce = _params.Count >= 7 ? uint.Parse(_params[6]!.AsString()) : (uint)new Random().Next();
 
             Transaction tx = new()
             {

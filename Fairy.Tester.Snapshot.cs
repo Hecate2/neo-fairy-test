@@ -10,7 +10,7 @@ namespace Neo.Plugins
 
         public FairySession GetOrCreateFairySession(string session)
         {
-            FairySession fairySession;
+            FairySession? fairySession;
             if (!sessionStringToFairySession.TryGetValue(session, out fairySession))
             {  // we allow initializing a new session when executing
                 fairySession = NewFairySession(system, this);
@@ -19,7 +19,7 @@ namespace Neo.Plugins
             return fairySession;
         }
 
-        private FairyEngine BuildSnapshotWithDummyScript(FairyEngine engine = null)
+        private FairyEngine BuildSnapshotWithDummyScript(FairyEngine? engine = null)
         {
             return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);
         }
@@ -30,7 +30,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var param in _params)
             {
-                string session = param.AsString();
+                string session = param!.AsString();
                 if (sessionStringToFairySession.TryGetValue(session, out _))
                     json[session] = true;
                 else
@@ -46,7 +46,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var s in _params)
             {
-                string str = s.AsString();
+                string str = s!.AsString();
                 json[str] = sessionStringToFairySession.Remove(str, out var _);
             }
             return json;
@@ -66,8 +66,8 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken RenameSnapshot(JArray _params)
         {
-            string from = _params[0].AsString();
-            string to = _params[1].AsString();
+            string from = _params[0]!.AsString();
+            string to = _params[1]!.AsString();
             sessionStringToFairySession[to] = sessionStringToFairySession[from];
             sessionStringToFairySession.Remove(from, out var _);
             JObject json = new();
@@ -78,8 +78,8 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken CopySnapshot(JArray _params)
         {
-            string from = _params[0].AsString();
-            string to = _params[1].AsString();
+            string from = _params[0]!.AsString();
+            string to = _params[1]!.AsString();
             FairySession testSessionTo = NewFairySession(system, this);
             testSessionTo.engine = BuildSnapshotWithDummyScript(sessionStringToFairySession[from].engine);
             testSessionTo.debugEngine = null;

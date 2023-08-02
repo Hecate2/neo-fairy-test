@@ -16,7 +16,7 @@ namespace Neo.Plugins
         protected ConcurrentDictionary<NotifyEventArgs, UInt256> notifications = new();
         protected ConcurrentDictionary<SemaphoreSlim, WebSocket> committingBlockSemaphores = new();
         protected ConcurrentDictionary<SemaphoreSlim, WebSocket> notificationSemaphores = new();
-        protected DataCache latestSnapshot;
+        protected DataCache? latestSnapshot;
 
         protected void RegisterBlockchainEvents()
         {
@@ -45,7 +45,7 @@ namespace Neo.Plugins
         [WebsocketControlMethod]
         protected virtual JToken UnsubscribeLastAction(WebSocket webSocket, JArray _params, LinkedList<object> webSocketSubscriptions)
         {
-            object o = webSocketSubscriptions.Last.Value;
+            object o = webSocketSubscriptions.Last!.Value;
             if (o is WebSocketSubscription)
             {
                 WebSocketSubscription webSocketSubscription = (WebSocketSubscription)o;
@@ -68,7 +68,7 @@ namespace Neo.Plugins
         [WebsocketControlMethod]
         protected virtual JToken UnsubscribeMethod(WebSocket webSocket, JArray _params, LinkedList<object> webSocketSubscriptions)
         {
-            string method = _params[0].AsString();
+            string method = _params[0]!.AsString();
             JArray returned = new();
             LinkedListNode<object>? node = webSocketSubscriptions.Last;
             while (node != null)
@@ -133,8 +133,8 @@ namespace Neo.Plugins
         [WebsocketMethod]
         protected virtual Action SubscribeContractEvent(WebSocket webSocket, JArray _params, CancellationToken cancellationToken)
         {
-            HashSet<UInt160> contracts =  _params.Count > 0 ? ((JArray)_params[0]).Select(v => UInt160.Parse(v.AsString())).ToHashSet() : new();
-            HashSet<string> eventNames =  _params.Count > 1 ? ((JArray)_params[1]).Select(v => v.AsString().ToLower()).ToHashSet() : new();
+            HashSet<UInt160> contracts =  _params.Count > 0 ? ((JArray)_params[0]!).Select(v => UInt160.Parse(v!.AsString())).ToHashSet() : new();
+            HashSet<string> eventNames =  _params.Count > 1 ? ((JArray)_params[1]!).Select(v => v!.AsString().ToLower()).ToHashSet() : new();
             return async () =>
             {
                 SemaphoreSlim semaphore = new(1);

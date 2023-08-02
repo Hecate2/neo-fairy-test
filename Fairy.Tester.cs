@@ -23,13 +23,13 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject InvokeFunctionWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            bool writeSnapshot = _params[1].AsBoolean();
-            UInt160 script_hash = UInt160.Parse(_params[2].AsString());
-            string operation = _params[3].AsString();
-            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
-            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 7 ? WitnessesFromJson((JArray)_params[6]) : null;
+            string session = _params[0]!.AsString();
+            bool writeSnapshot = _params[1]!.AsBoolean();
+            UInt160 script_hash = UInt160.Parse(_params[2]!.AsString());
+            string operation = _params[3]!.AsString();
+            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]!).Select(p => ContractParameter.FromJson((JObject)p!)).ToArray() : System.Array.Empty<ContractParameter>();
+            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5]!, system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 7 ? WitnessesFromJson((JArray)_params[6]!) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
@@ -42,18 +42,18 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject InvokeManyWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            bool writeSnapshot = _params[1].AsBoolean();
-            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 5 ? WitnessesFromJson((JArray)_params[4]) : null;
+            string session = _params[0]!.AsString();
+            bool writeSnapshot = _params[1]!.AsBoolean();
+            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3]!, system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 5 ? WitnessesFromJson((JArray)_params[4]!) : null;
             byte[] script = Array.Empty<byte>();
             using (ScriptBuilder sb = new())
             {
-                foreach (JArray invokeParams in (JArray)_params[2])
+                foreach (JArray? invokeParams in (JArray)_params[2]!)
                 {
-                    UInt160 script_hash = UInt160.Parse(invokeParams[0].AsString());
-                    string operation = invokeParams[1].AsString();
-                    ContractParameter[] args = invokeParams.Count >= 3 ? ((JArray)invokeParams[2]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
+                    UInt160 script_hash = UInt160.Parse(invokeParams![0]!.AsString());
+                    string operation = invokeParams[1]!.AsString();
+                    ContractParameter[] args = invokeParams.Count >= 3 ? ((JArray)invokeParams[2]!).Select(p => ContractParameter.FromJson((JObject)p!)).ToArray() : System.Array.Empty<ContractParameter>();
                     sb.EmitDynamicCall(script_hash, operation, args);
                 }
                 script = sb.ToArray();
@@ -64,11 +64,11 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject InvokeScriptWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            bool writeSnapshot = _params[1].AsBoolean();
-            byte[] script = Convert.FromBase64String(_params[2].AsString());
-            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3], system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 4 ? WitnessesFromJson((JArray)_params[3]) : null;
+            string session = _params[0]!.AsString();
+            bool writeSnapshot = _params[1]!.AsBoolean();
+            byte[] script = Convert.FromBase64String(_params[2]!.AsString());
+            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3]!, system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 4 ? WitnessesFromJson((JArray)_params[3]!) : null;
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 
@@ -92,9 +92,9 @@ namespace Neo.Plugins
                 Script = script,
                 Witnesses = witnesses
             };
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionStringToFairySession[session].engine = newEngine;
 
@@ -131,7 +131,7 @@ namespace Neo.Plugins
                     }
                     else
                     {
-                        oracleRequests = (JArray)json["oraclerequests"];
+                        oracleRequests = (JArray)json["oraclerequests"]!;
                     }
                     oracleRequests.Add(oracleRequest.ToStackItem(new ReferenceCounter()).ToJson());
                 }
@@ -166,7 +166,7 @@ namespace Neo.Plugins
                     //catch (Exception _) {; }
                     traceback += $"\r\n\tInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
                 }
-                traceback += $"\r\n{json["exception"].GetString()}";
+                traceback += $"\r\n{json["exception"]!.GetString()}";
 
                 if (!logs.IsEmpty)
                 {
@@ -201,7 +201,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        private void ProcessInvokeWithWalletAndSnapshot(FairyEngine engine, byte[] script, JObject result, Signer[]? signers = null, Block block = null)
+        private void ProcessInvokeWithWalletAndSnapshot(FairyEngine engine, byte[] script, JObject result, Signer[]? signers = null, Block? block = null)
         {
             Wallet signatureWallet = engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : engine.runtimeArgs.fairyWallet;
             if (signatureWallet == null || signers == null) return;

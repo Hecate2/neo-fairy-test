@@ -96,14 +96,14 @@ namespace Neo.Plugins
             foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["block_added"])
             {
                 JObject _params = subscription.@params;
-                if (_params.ContainsProperty("till") && _params["till"].AsNumber() < block.Index)
+                if (_params.ContainsProperty("till") && _params["till"]!.AsNumber() < block.Index)
                 {
                     // close this subscription, because it is impossible to have later blocks fulfilling the "till" criteria
                     subscriptionsToClose.Add(subscription);
                     continue;
                 }
-                if (_params.ContainsProperty("primary") && _params["primary"].AsNumber() != block.PrimaryIndex) continue;
-                if (_params.ContainsProperty("since") && _params["since"].AsNumber() > block.Index) continue;
+                if (_params.ContainsProperty("primary") && _params["primary"]!.AsNumber() != block.PrimaryIndex) continue;
+                if (_params.ContainsProperty("since") && _params["since"]!.AsNumber() > block.Index) continue;
 
                 JObject returnedJson = new();
                 returnedJson["jsonrpc"] = "2.0";
@@ -129,7 +129,7 @@ namespace Neo.Plugins
                 JObject _params = subscription.@params;
                 if (_params.ContainsProperty("sender"))
                 {
-                    string wantedSender = _params["sender"].AsString();
+                    string wantedSender = _params["sender"]!.AsString();
                     UInt160.TryParse(wantedSender, out UInt160 wantedSenderUInt160);
                     if (!wantedSender.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                     {
@@ -174,7 +174,7 @@ namespace Neo.Plugins
                     {
                         if (_params.ContainsProperty("contract"))
                         {
-                            string wantedContract = _params["sender"].AsString();
+                            string wantedContract = _params["sender"]!.AsString();
                             UInt160.TryParse(wantedContract, out UInt160 wantedContractUInt160);
                             if (!wantedContract.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                             {
@@ -185,7 +185,7 @@ namespace Neo.Plugins
                             if (wantedContractUInt160 != notification.ScriptHash)
                                 continue;
                         }
-                        if (_params.ContainsProperty("name") && _params["name"].AsString() != notification.EventName)
+                        if (_params.ContainsProperty("name") && _params["name"]!.AsString() != notification.EventName)
                             continue;
                         JObject returnedJson = new();
                         returnedJson["jsonrpc"] = "2.0";
@@ -221,7 +221,7 @@ namespace Neo.Plugins
                 {
                     if (_params.ContainsProperty("container"))
                     {
-                        string wantedTxOrBlock = _params["container"].AsString();
+                        string wantedTxOrBlock = _params["container"]!.AsString();
                         UInt256.TryParse(wantedTxOrBlock, out UInt256 wantedTxOrBlockUInt256);
                         if (!wantedTxOrBlock.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                         {
@@ -233,7 +233,7 @@ namespace Neo.Plugins
                         if (wantedTxOrBlockUInt256 == block.Hash)
                         {
                             subscriptionsToClose.Add(subscription);  // impossble to have another container of the same hash; remove subscription
-                            if (_params.ContainsProperty("state") && _params["state"].AsString() != Enum.GetName(app.VMState))
+                            if (_params.ContainsProperty("state") && _params["state"]!.AsString() != Enum.GetName(app.VMState))
                                 continue;
                             else
                                 goto sendMessage;
@@ -241,7 +241,7 @@ namespace Neo.Plugins
                         if (wantedTxOrBlockUInt256 == app.Transaction?.Hash)
                         {
                             subscriptionsToClose.Add(subscription);  // impossble to have another container of the same hash; remove subscription
-                            if (_params.ContainsProperty("state") && _params["state"].AsString() != Enum.GetName(app.VMState))
+                            if (_params.ContainsProperty("state") && _params["state"]!.AsString() != Enum.GetName(app.VMState))
                                 continue;
                             else
                                 goto sendMessage;
@@ -250,7 +250,7 @@ namespace Neo.Plugins
                     }
                     else
                     {
-                        if (_params.ContainsProperty("state") && _params["state"].AsString() != Enum.GetName(app.VMState))
+                        if (_params.ContainsProperty("state") && _params["state"]!.AsString() != Enum.GetName(app.VMState))
                             continue;
                     }
                 sendMessage:
@@ -273,7 +273,7 @@ namespace Neo.Plugins
         [WebsocketNeoGoCompatibleMethod]
         protected virtual object Subscribe(WebSocket webSocket, JArray _params)
         {
-            string methodName = _params[0].AsString();
+            string methodName = _params[0]!.AsString();
             if (!methodNameToSubscriptions.ContainsKey(methodName))
                 throw new NotImplementedException(methodName);
             subscriptionIdSemaphore.Wait();
@@ -281,7 +281,7 @@ namespace Neo.Plugins
             subscriptionId += 1;
             // subscriptionIdSemaphore.Release();  // after return
 
-            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1] : new JObject() };
+            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1]! : new JObject() };
             methodNameToSubscriptions[methodName].Add(subscription);
             idToSubscriptions[newId] = subscription;
             return newId;
@@ -290,9 +290,9 @@ namespace Neo.Plugins
         [WebsocketNeoGoCompatibleMethod]
         protected virtual object Unsubscribe(WebSocket webSocket, JArray _params)
         {
-            foreach (JToken param in _params)
+            foreach (JToken? param in _params)
             {
-                uint subscriptionId = uint.Parse(param.AsString(), System.Globalization.NumberStyles.HexNumber);
+                uint subscriptionId = uint.Parse(param!.AsString(), System.Globalization.NumberStyles.HexNumber);
                 if (!idToSubscriptions.ContainsKey(subscriptionId))
                     throw new ArgumentException($"{subscriptionId}");
                 idToSubscriptions.Remove(subscriptionId, out WebSocketSubscriptionNeoGoCompatible subscription);

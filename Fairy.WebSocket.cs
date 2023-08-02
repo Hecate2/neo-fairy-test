@@ -45,28 +45,28 @@ namespace Neo.Plugins
         {
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                WebsocketNeoGoCompatibleMethodAttribute attribute = method.GetCustomAttribute<WebsocketNeoGoCompatibleMethodAttribute>();
+                WebsocketNeoGoCompatibleMethodAttribute attribute = method.GetCustomAttribute<WebsocketNeoGoCompatibleMethodAttribute>()!;
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
                 webSocketNeoGoCompatibleMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, object>>(handler);
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                WebsocketMethodAttribute attribute = method.GetCustomAttribute<WebsocketMethodAttribute>();
+                WebsocketMethodAttribute attribute = method.GetCustomAttribute<WebsocketMethodAttribute>()!;
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
                 webSocketMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, CancellationToken, object>>(handler);
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                WebsocketControlMethodAttribute attribute = method.GetCustomAttribute<WebsocketControlMethodAttribute>();
+                WebsocketControlMethodAttribute attribute = method.GetCustomAttribute<WebsocketControlMethodAttribute>()!;
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
                 webSocketControlMethods[name] = method.CreateDelegate<Func<WebSocket, JArray, LinkedList<object>, object>>(handler);
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                RpcMethodAttribute attribute = method.GetCustomAttribute<RpcMethodAttribute>();
+                RpcMethodAttribute attribute = method.GetCustomAttribute<RpcMethodAttribute>()!;
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
                 rpcMethods[name] = method.CreateDelegate<Func<JArray, object>>(handler);
@@ -92,7 +92,7 @@ namespace Neo.Plugins
                     {
                         if (err != SslPolicyErrors.None)
                             return false;
-                        X509Certificate2 authority = chain.ChainElements[^1].Certificate;
+                        X509Certificate2 authority = chain!.ChainElements[^1].Certificate;
                         return settings.TrustedAuthorities.Contains(authority.Thumbprint);
                     };
                 });
@@ -155,10 +155,10 @@ namespace Neo.Plugins
                     stream.Seek(0, SeekOrigin.Begin);
                     using (StreamReader reader = new StreamReader(stream))
                     {
-                        request = JObject.Parse(await reader.ReadToEndAsync());
+                        request = JObject.Parse(await reader.ReadToEndAsync())!;
                     }
                 }
-                string method = request["method"].AsString();
+                string method = request["method"]!.AsString();
                 if (/*!CheckAuth(context) || */settings.DisabledMethods.Contains(method))
                     throw new RpcException(-400, "Method disabled by server settings");
                 JToken @params = request["params"] ?? new JArray();
@@ -190,7 +190,7 @@ namespace Neo.Plugins
                     switch (wsFunc(webSocket, (JArray)@params, cancellationToken))
                     {
                         case Action action:
-                            Task.Run(action);
+                            _=Task.Run(action);
                             webSocketSubscriptions.AddLast(new WebSocketSubscription { method = method, @params = @params, cancellationTokenSource=cancellationTokenSource });
                             if (request["needresponse"]?.AsBoolean() is true)
                             {

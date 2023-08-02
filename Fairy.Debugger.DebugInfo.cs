@@ -47,17 +47,17 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetDebugInfo(JArray _params)
         {
-            string param0 = _params[0].AsString();
+            string param0 = _params[0]!.AsString();
             UInt160 scriptHash = UInt160.Parse(param0);
             // nccs YourContractProject.csproj --debug
             // find .nefdbgnfo beside your .nef contract, and
             // give me the base64encode(content) of .nefdbgnfo file
-            JObject nefDbgNfo = (JObject)JObject.Parse(Unzip(Convert.FromBase64String(_params[1].AsString())));
+            JObject nefDbgNfo = (JObject)JObject.Parse(Unzip(Convert.FromBase64String(_params[1]!.AsString())))!;
             contractScriptHashToNefDbgNfo[scriptHash] = nefDbgNfo;
             // https://github.com/devhawk/DumpNef
             // dumpnef contract.nef > contract.nef.txt
             // give me the content of that txt file!
-            string dumpNef = _params[2].AsString();
+            string dumpNef = _params[2]!.AsString();
             string[] lines = dumpNef.Replace("\r", "").Split("\n", StringSplitOptions.RemoveEmptyEntries);
 
             HashSet<SourceFilenameAndLineNum> sourceFilenameAndLineNums = new();
@@ -162,7 +162,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken ListFilenamesOfContract(JArray _params)
         {
-            string scriptHashStr = _params[0].AsString();
+            string scriptHashStr = _params[0]!.AsString();
             UInt160 scriptHash = UInt160.Parse(scriptHashStr);
             List<string> filenameList = contractScriptHashToSourceLineFilenames[scriptHash].ToList();
             filenameList.Sort();
@@ -180,7 +180,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var s in _params)
             {
-                string str = s.AsString();
+                string str = s!.AsString();
                 UInt160 scriptHash = UInt160.Parse(str);
                 contractScriptHashToSourceLineNums.Remove(scriptHash, out _);
                 contractScriptHashToInstructionPointerToSourceLineNum.Remove(scriptHash, out _);
@@ -197,20 +197,20 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
-        protected virtual JToken GetMethodByInstructionPointer(JArray _params)
+        protected virtual JToken? GetMethodByInstructionPointer(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
-            uint instrcutionPointer = uint.Parse(_params[1].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
+            uint instrcutionPointer = uint.Parse(_params[1]!.AsString());
             try
             {
-                foreach (JObject method in (JArray)contractScriptHashToNefDbgNfo[scriptHash]["methods"])
+                foreach (JObject? method in (JArray)contractScriptHashToNefDbgNfo[scriptHash]["methods"]!)
                 {
-                    string[] rangeStr = method["range"].AsString().Split("-");
+                    string[] rangeStr = method!["range"]!.AsString().Split("-");
                     if (instrcutionPointer >= uint.Parse(rangeStr[0]) && instrcutionPointer <= uint.Parse(rangeStr[1]))
                         return method;
                 }
             }
-            catch (KeyNotFoundException ex)
+            catch (KeyNotFoundException)
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");

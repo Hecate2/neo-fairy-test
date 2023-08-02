@@ -21,10 +21,10 @@ namespace Neo.Plugins
         {
             if (defaultFairyWallet == null)
                 throw new Exception("Please open a wallet before deploying a contract.");
-            string session = _params[0].AsString();
-            NefFile nef = Convert.FromBase64String(_params[1].AsString()).AsSerializable<NefFile>();
-            ContractManifest manifest = ContractManifest.Parse(_params[2].AsString());
-            Signer[] signers = SignersFromJson((JArray)_params[3], system.Settings);
+            string session = _params[0]!.AsString();
+            NefFile nef = Convert.FromBase64String(_params[1]!.AsString()).AsSerializable<NefFile>();
+            ContractManifest manifest = ContractManifest.Parse(_params[2]!.AsString());
+            Signer[] signers = SignersFromJson((JArray)_params[3]!, system.Settings);
             FairySession testSession = GetOrCreateFairySession(session);
             DataCache snapshot = testSession.engine.Snapshot;
             byte[] script;
@@ -66,7 +66,7 @@ namespace Neo.Plugins
         protected virtual JToken GetContract(JArray _params)
         {
             string? session = _params[0]?.AsString();
-            UInt160 hash = UInt160.Parse(_params[1].AsString());
+            UInt160 hash = UInt160.Parse(_params[1]!.AsString());
             ContractState contractState = NativeContract.ContractManagement.GetContract(
                 session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot,
                 hash);
@@ -83,9 +83,9 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken AwaitConfirmedTransaction(JArray _params)
         {
-            UInt256 hash = UInt256.Parse(_params[0].AsString());
-            bool verbose = _params.Count >= 2 && _params[1].AsBoolean();
-            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2].AsString()) : 2;
+            UInt256 hash = UInt256.Parse(_params[0]!.AsString());
+            bool verbose = _params.Count >= 2 && _params[1]!.AsBoolean();
+            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2]!.AsString()) : 2;
             JToken json = GetConfirmedTransaction(hash, verbose);
             if (json != null)
                 return json;
@@ -109,11 +109,11 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject PutStorageWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            UInt160 contract = UInt160.Parse(_params[1].AsString());
-            string keyBase64 = _params[2].AsString();
+            string session = _params[0]!.AsString();
+            UInt160 contract = UInt160.Parse(_params[1]!.AsString());
+            string keyBase64 = _params[2]!.AsString();
             byte[] key = Convert.FromBase64String(keyBase64);
-            string valueBase64 = _params[3].AsString();
+            string valueBase64 = _params[3]!.AsString();
             byte[] value = Convert.FromBase64String(valueBase64);
 
             FairySession testSession = sessionStringToFairySession[session];
@@ -132,8 +132,8 @@ namespace Neo.Plugins
         protected virtual JObject GetStorageWithSession(JArray _params)
         {
             string? session = _params[0]?.AsString();
-            UInt160 contract = UInt160.Parse(_params[1].AsString());
-            string keyBase64 = _params[2].AsString();
+            UInt160 contract = UInt160.Parse(_params[1]!.AsString());
+            string keyBase64 = _params[2]!.AsString();
             byte[] key = Convert.FromBase64String(keyBase64);
 
             ContractState contractState;
@@ -159,9 +159,9 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject FindStorageWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            UInt160 contract = UInt160.Parse(_params[1].AsString());
-            string keyBase64 = _params[2].AsString();
+            string session = _params[0]!.AsString();
+            UInt160 contract = UInt160.Parse(_params[1]!.AsString());
+            string keyBase64 = _params[2]!.AsString();
             byte[] prefix = Convert.FromBase64String(keyBase64);
 
             FairyEngine oldEngine = sessionStringToFairySession[session].engine;
@@ -177,7 +177,7 @@ namespace Neo.Plugins
         {
             JObject json = new();
             if (_params.Count >= 1)
-                json["time"] = sessionStringToFairySession[_params[0].AsString()].engine.GetFairyTime();  // usually you can use GetSnapshotTimeStamp instead of this method
+                json["time"] = sessionStringToFairySession[_params[0]!.AsString()].engine.GetFairyTime();  // usually you can use GetSnapshotTimeStamp instead of this method
             else
                 json["time"] = FairyEngine.Run(new byte[] { 0x40 }, system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke).GetTime();
             return json;
@@ -186,29 +186,29 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject SetNeoBalance(JArray _params)
         {
-            string session = _params[0].AsString();
-            UInt160 account = UInt160.Parse(_params[1].AsString());
-            ulong balance = ulong.Parse(_params[2].AsString());
+            string session = _params[0]!.AsString();
+            UInt160 account = UInt160.Parse(_params[1]!.AsString());
+            ulong balance = ulong.Parse(_params[2]!.AsString());
             return SetTokenBalance(session, neoScriptHash, account, balance, Native_Prefix_Account);
         }
 
         [RpcMethod]
         protected virtual JObject SetGasBalance(JArray _params)
         {
-            string session = _params[0].AsString();
-            UInt160 account = UInt160.Parse(_params[1].AsString());
-            ulong balance = ulong.Parse(_params[2].AsString());
+            string session = _params[0]!.AsString();
+            UInt160 account = UInt160.Parse(_params[1]!.AsString());
+            ulong balance = ulong.Parse(_params[2]!.AsString());
             return SetTokenBalance(session, gasScriptHash, account, balance, Native_Prefix_Account);
         }
 
         [RpcMethod]
         protected virtual JObject SetNep17Balance(JArray _params)
         {
-            string session = _params[0].AsString();
-            UInt160 contract = UInt160.Parse(_params[1].AsString());
-            UInt160 account = UInt160.Parse(_params[2].AsString());
-            ulong balance = ulong.Parse(_params[3].AsString());
-            byte prefix = byte.Parse(_params.Count >= 5 ? _params[4].AsString() : "1");
+            string session = _params[0]!.AsString();
+            UInt160 contract = UInt160.Parse(_params[1]!.AsString());
+            UInt160 account = UInt160.Parse(_params[2]!.AsString());
+            ulong balance = ulong.Parse(_params[3]!.AsString());
+            byte prefix = byte.Parse(_params.Count >= 5 ? _params[4]!.AsString() : "1");
             return SetTokenBalance(session, contract, account, balance, prefix);
         }
 
@@ -251,7 +251,7 @@ namespace Neo.Plugins
             }
         }
 
-        protected JToken GetConfirmedTransaction(UInt256 hash, bool verbose)
+        protected JToken? GetConfirmedTransaction(UInt256 hash, bool verbose)
         {
             // Do not consider anything in MemPool, because they have not been confirmed
             //if (system.MemPool.TryGetValue(hash, out Transaction tx) && !verbose)
@@ -261,12 +261,10 @@ namespace Neo.Plugins
             TransactionState state = NativeContract.Ledger.GetTransactionState(snapshot, hash);
             tx ??= state?.Transaction;
             if (tx is null)
-            {
                 return null;
-            }
             else
             {
-                if (!verbose) return Convert.ToBase64String(tx.ToArray());
+                if (!verbose) return Convert.ToBase64String(tx.ToArray())!;
                 JObject json = TransactionToJson(tx, system.Settings);
                 if (state is not null)
                 {
@@ -327,11 +325,11 @@ namespace Neo.Plugins
         {
             var ret = _params.Select(u => new Signer
             {
-                Account = AddressToScriptHash(u["account"].AsString(), settings.AddressVersion),
-                Scopes = (WitnessScope)Enum.Parse(typeof(WitnessScope), u["scopes"]?.AsString()),
-                AllowedContracts = ((JArray)u["allowedcontracts"])?.Select(p => UInt160.Parse(p.AsString())).ToArray(),
-                AllowedGroups = ((JArray)u["allowedgroups"])?.Select(p => ECPoint.Parse(p.AsString(), ECCurve.Secp256r1)).ToArray(),
-                Rules = ((JArray)u["rules"])?.Select(r => WitnessRule.FromJson((JObject)r)).ToArray(),
+                Account = AddressToScriptHash(u!["account"]!.AsString(), settings.AddressVersion),
+                Scopes = (WitnessScope)Enum.Parse(typeof(WitnessScope), u["scopes"]?.AsString()!),
+                AllowedContracts = ((JArray)u["allowedcontracts"]!)?.Select(p => UInt160.Parse(p!.AsString())).ToArray(),
+                AllowedGroups = ((JArray)u["allowedgroups"]!)?.Select(p => ECPoint.Parse(p!.AsString(), ECCurve.Secp256r1)).ToArray(),
+                Rules = ((JArray)u["rules"]!)?.Select(r => WitnessRule.FromJson((JObject)r!)).ToArray(),
             }).ToArray();
 
             // Validate format
@@ -345,7 +343,7 @@ namespace Neo.Plugins
         {
             return _params.Select(u => new
             {
-                Invocation = u["invocation"]?.AsString(),
+                Invocation = u!["invocation"]?.AsString(),
                 Verification = u["verification"]?.AsString()
             }).Where(x => x.Invocation != null || x.Verification != null).Select(x => new Witness()
             {

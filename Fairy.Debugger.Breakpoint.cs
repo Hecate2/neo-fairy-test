@@ -12,7 +12,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetAssemblyBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -27,7 +27,7 @@ namespace Neo.Plugins
             JObject json = new();
             for (int i = 1; i<_params.Count; i++)
             {
-                string breakpointInstructionPointerStr = _params[i].AsString();
+                string breakpointInstructionPointerStr = _params[i]!.AsString();
                 uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
                 if (contractScriptHashToInstructionPointerToOpCode[scriptHash].ContainsKey(breakpointInstructionPointer))
                     json[breakpointInstructionPointerStr] = assemblyBreakpoints.Add(breakpointInstructionPointer);
@@ -40,7 +40,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken ListAssemblyBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -59,7 +59,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DeleteAssemblyBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -81,7 +81,7 @@ namespace Neo.Plugins
                 HashSet<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash];
                 for (int i = 1; i<_params.Count; i++)
                 {
-                    string breakpointInstructionPointerStr = _params[i].AsString();
+                    string breakpointInstructionPointerStr = _params[i]!.AsString();
                     uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
                     json[breakpointInstructionPointerStr] = assemblyBreakpoints.Remove(breakpointInstructionPointer);
                 }
@@ -92,7 +92,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken SetSourceCodeBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -108,9 +108,9 @@ namespace Neo.Plugins
             int i = 1;
             while (_params.Count > i)
             {
-                string sourceCodeFilename = _params[i].AsString();
+                string sourceCodeFilename = _params[i]!.AsString();
                 i++;
-                uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
+                uint sourceCodeBreakpointLineNum = uint.Parse(_params[i]!.AsString());
                 i++;
                 JObject json = new();
                 SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { sourceFilename=sourceCodeFilename, lineNum=sourceCodeBreakpointLineNum };
@@ -132,7 +132,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken ListSourceCodeBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -153,7 +153,7 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DeleteSourceCodeBreakpoints(JArray _params)
         {
-            UInt160 scriptHash = UInt160.Parse(_params[0].AsString());
+            UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
             if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
@@ -180,9 +180,9 @@ namespace Neo.Plugins
                 int i = 1;
                 while (_params.Count > i)
                 {
-                    string sourceCodeBreakpointFilename = _params[i].AsString();
+                    string sourceCodeBreakpointFilename = _params[i]!.AsString();
                     i++;
-                    uint sourceCodeBreakpointLineNum = uint.Parse(_params[i].AsString());
+                    uint sourceCodeBreakpointLineNum = uint.Parse(_params[i]!.AsString());
                     i++;
                     if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { sourceFilename=sourceCodeBreakpointFilename, lineNum=sourceCodeBreakpointLineNum }))
                     {

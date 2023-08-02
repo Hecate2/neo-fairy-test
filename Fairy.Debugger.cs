@@ -23,13 +23,13 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DebugFunctionWithSession(JArray _params)
         {
-            string session = _params[0].AsString();
-            bool writeSnapshot = _params[1].AsBoolean();
-            UInt160 script_hash = UInt160.Parse(_params[2].AsString());
-            string operation = _params[3].AsString();
-            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]).Select(p => ContractParameter.FromJson((JObject)p)).ToArray() : System.Array.Empty<ContractParameter>();
-            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5], system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 6 ? WitnessesFromJson((JArray)_params[5]) : null;
+            string session = _params[0]!.AsString();
+            bool writeSnapshot = _params[1]!.AsBoolean();
+            UInt160 script_hash = UInt160.Parse(_params[2]!.AsString());
+            string operation = _params[3]!.AsString();
+            ContractParameter[] args = _params.Count >= 5 ? ((JArray)_params[4]!).Select(p => ContractParameter.FromJson((JObject)p!)).ToArray() : System.Array.Empty<ContractParameter>();
+            Signer[]? signers = _params.Count >= 6 ? SignersFromJson((JArray)_params[5]!, system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 6 ? WitnessesFromJson((JArray)_params[5]!) : null;
 
             byte[] script;
             using (ScriptBuilder sb = new())
@@ -45,10 +45,10 @@ namespace Neo.Plugins
             FairySession testSession = GetOrCreateFairySession(session);
             FairyEngine newEngine;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             BreakReason breakReason = BreakReason.None;
             newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             if (writeSnapshot)
                 sessionStringToFairySession[session].debugEngine = newEngine;
             return DumpDebugResultJson(newEngine, breakReason);
@@ -57,13 +57,13 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DebugContinue(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             Execute(newEngine, out breakReason);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
@@ -92,7 +92,7 @@ namespace Neo.Plugins
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
             json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
-            GetSourceCode(json, newEngine.CurrentScriptHash, (uint)newEngine.CurrentContext.InstructionPointer);
+            GetSourceCode(json, newEngine.CurrentScriptHash!, (uint)newEngine.CurrentContext!.InstructionPointer);
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
@@ -115,7 +115,7 @@ namespace Neo.Plugins
                     //catch (Exception _) {; }
                     traceback += $"\r\n\tScriptHash={contextScriptHash}, InstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length}";
                 }
-                traceback += $"\r\n{json["exception"].GetString()}";
+                traceback += $"\r\n{json["exception"]!.GetString()}";
 
                 if (!logs.IsEmpty)
                 {
@@ -158,7 +158,7 @@ namespace Neo.Plugins
             actualBreakReason = BreakReason.None;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
                 return engine;
-            Instruction currentInstruction = engine.CurrentContext.CurrentInstruction ?? Instruction.RET;
+            Instruction currentInstruction = engine.CurrentContext!.CurrentInstruction ?? Instruction.RET;
             OpCode currentOpCode = currentInstruction.OpCode;
             if ((requiredBreakReason & BreakReason.Call) > 0 &&
                (currentOpCode == OpCode.CALL || currentOpCode == OpCode.CALLA || currentOpCode == OpCode.CALLT || currentOpCode == OpCode.CALL_L
@@ -250,13 +250,13 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DebugStepInto(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             StepInto(newEngine, out breakReason);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
@@ -273,13 +273,13 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DebugStepOut(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             StepOut(newEngine, out breakReason);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
@@ -308,26 +308,26 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken DebugStepOverSourceCode(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             StepOverSourceCode(newEngine, out breakReason);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
         [RpcMethod]
         protected virtual JToken DebugStepOverAssembly(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
-            FairyEngine.Log += CacheLog;
+            FairyEngine.Log += CacheLog!;
             ExecuteAndCheck(newEngine, out breakReason);
-            FairyEngine.Log -= CacheLog;
+            FairyEngine.Log -= CacheLog!;
             return DumpDebugResultJson(newEngine, BreakReason.None);
         }
 
@@ -340,44 +340,44 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken GetLocalVariables(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
-            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).LocalVariables.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).LocalVariables!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
         [RpcMethod]
         protected virtual JToken GetArguments(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
-            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).Arguments.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).Arguments!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
         [RpcMethod]
         protected virtual JToken GetStaticFields(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
-            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).StaticFields.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
+            return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).StaticFields!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
         [RpcMethod]
         protected virtual JToken GetEvaluationStack(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).EvaluationStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
         [RpcMethod]
         protected virtual JToken GetInvocationStack(JArray _params)
         {
-            string session = _params[0].AsString();
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             return new JArray(newEngine.InvocationStack.Select(p =>
             {
                 JObject json = new();
@@ -391,52 +391,52 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JToken GetInstructionPointer(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).InstructionPointer);
         }
 
         [RpcMethod]
         protected virtual JToken GetVariableValueByName(JArray _params)
         {
-            string session = _params[0].AsString();
-            string variableName = _params[1].AsString();
-            int invocationStackIndex = _params.Count > 2 ? int.Parse(_params[2].AsString()) : 0;
+            string session = _params[0]!.AsString();
+            string variableName = _params[1]!.AsString();
+            int invocationStackIndex = _params.Count > 2 ? int.Parse(_params[2]!.AsString()) : 0;
             return GetVariableNamesAndValues(new JArray(session, invocationStackIndex))[variableName] ?? throw new ArgumentException($"Variable `{variableName}` not found.");
         }
 
         [RpcMethod]
         protected virtual JToken GetVariableNamesAndValues(JArray _params)
         {
-            string session = _params[0].AsString();
-            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1].AsString()) : 0;
-            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine;
+            string session = _params[0]!.AsString();
+            int invocationStackIndex = _params.Count > 1 ? int.Parse(_params[1]!.AsString()) : 0;
+            FairyEngine newEngine = sessionStringToFairySession[session].debugEngine!;
             Neo.VM.ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
             UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
             int instructionPointer = invocationStackItem.InstructionPointer;
             JToken method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
             JObject returnedJson = new();
-            JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"];
+            JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"]!;
             foreach (JString param in staticVariables)
             {
-                string[] nameTypeAndIndex = param.AsString().Split(',');
+                string[] nameTypeAndIndex = param!.AsString().Split(',');
                 int index = int.Parse(nameTypeAndIndex[2]);
-                returnedJson[nameTypeAndIndex[0]] =  invocationStackItem.StaticFields[index].ToJson();
+                returnedJson[nameTypeAndIndex[0]] = invocationStackItem.StaticFields![index].ToJson();
             }
             if (method != JObject.Null)
             {
-                foreach (JToken param in (JArray)method["params"])
+                foreach (JToken? param in (JArray)method["params"]!)
                 {
-                    string[] nameTypeAndIndex = param.AsString().Split(',');
+                    string[] nameTypeAndIndex = param!.AsString().Split(',');
                     int index = int.Parse(nameTypeAndIndex[2]);
-                    returnedJson[nameTypeAndIndex[0]] = invocationStackItem.Arguments[index].ToJson();
+                    returnedJson[nameTypeAndIndex[0]] = invocationStackItem.Arguments![index].ToJson();
                 }
-                foreach (JToken param in (JArray)method["variables"])
+                foreach (JToken? param in (JArray)method["variables"]!)
                 {
-                    string[] nameTypeAndIndex = param.AsString().Split(',');
+                    string[] nameTypeAndIndex = param!.AsString().Split(',');
                     int index = int.Parse(nameTypeAndIndex[2]);
-                    returnedJson[nameTypeAndIndex[0]] = invocationStackItem.LocalVariables[index].ToJson();
+                    returnedJson[nameTypeAndIndex[0]] = invocationStackItem.LocalVariables![index].ToJson();
                 }
             }
             return returnedJson;

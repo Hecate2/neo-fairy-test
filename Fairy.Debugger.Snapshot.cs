@@ -23,7 +23,7 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var s in _params)
             {
-                string session = s.AsString();
+                string session = s!.AsString();
                 if (sessionStringToFairySession[session].debugEngine != null)
                 {
                     json[session] = true;
