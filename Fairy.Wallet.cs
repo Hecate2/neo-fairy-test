@@ -17,67 +17,74 @@ namespace Neo.Plugins
         {
             public readonly Wallet wallet;
             public readonly KeyPair key;
-            public readonly string nep2key;
-            public readonly string? password;
 
-            public FairyAccount(Wallet wallet, UInt160 scriptHash, string nep2key, KeyPair key)
+            public FairyAccount(Wallet wallet, UInt160 scriptHash, KeyPair key)
                 : base(scriptHash, wallet.ProtocolSettings)
             {
                 this.wallet = wallet;
                 this.key = key;
-                this.nep2key = nep2key;
             }
 
-            public FairyAccount(Wallet wallet, UInt160 scriptHash, KeyPair key, string password)
-                : this(wallet, scriptHash, key.Export(password, wallet.ProtocolSettings.AddressVersion, N:16384, r:8, p:8), key)
-            {
-                this.password = password;
-            }
             public override bool HasKey => true;
             public override KeyPair GetKey() => key;
         }
 
         public class FairyWallet : Wallet
         {
-            public readonly FairyAccount account;
-            public readonly string password;
+            public readonly List<FairyAccount> accounts = new();
+            public FairyAccount account { get => accounts[0]; }
             public override string Name => "Fairy";
             public override Version Version => Version.Parse("68");
 
-            public FairyWallet(ProtocolSettings settings, string nep2="6PYKrXGB2bhiux49bKYJPMMpaVic6SRrJcCLC8tdrz3YPLgktpe3H3PN35", string password="1", int N = 16384, int r = 8, int p = 8): base("./fairy/path", settings)
+            public FairyWallet(ProtocolSettings settings, string nep2="6PYKrXGB2bhiux49bKYJPMMpaVic6SRrJcCLC8tdrz3YPLgktpe3H3PN35", string password="1", int N = 16384, int r = 8, int p = 8): base("./fairy/path", settings) => CreateAccountFromNep2(nep2, password, N, r, p);
+            public FairyWallet(string wif, ProtocolSettings settings) : base("./fairy/path", settings) => CreateAccountFromWif(wif);
+            public override bool ChangePassword(string oldPassword, string newPassword) => throw new NotImplementedException($"Password is unnecessary for {nameof(FairyWallet)}");
+            public override bool Contains(UInt160 scriptHash) => GetAccount(scriptHash) != null;
+            public WalletAccount CreateAccountFromNep2(string nep2, string password, int N = 16384, int r = 8, int p = 8) => CreateAccount(GetPrivateKeyFromNEP2(nep2, password, ProtocolSettings.AddressVersion, N, r, p));
+            public WalletAccount CreateAccountFromWif(string wif) => CreateAccount(GetPrivateKeyFromWIF(wif));
+            public override WalletAccount CreateAccount(byte[] privateKey)
             {
-                this.password = password;
-                KeyPair key = new(GetPrivateKeyFromNEP2(nep2, password, ProtocolSettings.AddressVersion, N, r, p));
+                KeyPair key = new(privateKey);
                 Contract contract = new()
                 {
                     Script = Contract.CreateSignatureRedeemScript(key.PublicKey),
                     ParameterList = new[] { ContractParameterType.Signature },
                 };
-                account = new FairyAccount(this, contract.ScriptHash, nep2, key);
-                account.Contract = contract;
+                return CreateAccount(contract, key);
             }
-            public FairyWallet(string WIF, string password, ProtocolSettings settings) : base("./fairy/path", settings)
+            public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null)
             {
-                this.password = password;
-                KeyPair key = new(GetPrivateKeyFromWIF(WIF));
-                Contract contract = new()
-                {
-                    Script = Contract.CreateSignatureRedeemScript(key.PublicKey),
-                    ParameterList = new[] { ContractParameterType.Signature },
-                };
-                account = new FairyAccount(this, contract.ScriptHash, key, password);
+                foreach (WalletAccount acc in accounts)
+                    if (acc.ScriptHash == contract.ScriptHash)
+                        return acc;
+                if (key == null)
+                    throw new NotImplementedException("privateKey==null not supported for now");
+                FairyAccount account = new FairyAccount(this, contract.ScriptHash, key);
                 account.Contract = contract;
+                accounts.Add(account);
+                return account;
             }
-            public override bool ChangePassword(string oldPassword, string newPassword) => throw new NotImplementedException();
-            public override bool Contains(UInt160 scriptHash) => throw new NotImplementedException();
-            public override WalletAccount CreateAccount(byte[] privateKey) => throw new NotImplementedException();
-            public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null) => throw new NotImplementedException();
-            public override WalletAccount CreateAccount(UInt160 scriptHash) => throw new NotImplementedException();
+            public override WalletAccount CreateAccount(UInt160 scriptHash) => throw new NotImplementedException("privateKey==null not supported for now");
             public override void Delete() => throw new NotImplementedException();
-            public override bool DeleteAccount(UInt160 scriptHash) => throw new NotImplementedException();
-            public override WalletAccount GetAccount(UInt160 scriptHash) => account;  // Always return the account regardless of scriptHash
-            public override IEnumerable<WalletAccount> GetAccounts() => new List<WalletAccount> { account };
-            public override bool VerifyPassword(string password) => password == this.password;
+            public override bool DeleteAccount(UInt160 scriptHash)
+            {
+                foreach (FairyAccount account in accounts)
+                    if (account.ScriptHash == scriptHash)
+                    {
+                        accounts.Remove(account);
+                        return true;
+                    }
+                return false;
+            }
+            public override WalletAccount? GetAccount(UInt160 scriptHash)
+            {
+                foreach (WalletAccount account in accounts)
+                    if (account.ScriptHash == scriptHash)
+                        return account;
+                return null;
+            }
+            public override IEnumerable<WalletAccount> GetAccounts() => accounts;
+            public override bool VerifyPassword(string password) => true;
             public override void Save() => throw new NotImplementedException();
         }
 
@@ -93,11 +100,11 @@ namespace Neo.Plugins
             switch (GetExtension(path))
             {
                 case ".json":
-                    {
-                        NEP6Wallet nep6wallet = new(path, password, system.Settings);
-                        defaultFairyWallet = nep6wallet;
-                        break;
-                    }
+                {
+                    NEP6Wallet nep6wallet = new(path, password, system.Settings);
+                    defaultFairyWallet = nep6wallet;
+                    break;
+                }
                 default:
                     throw new NotSupportedException();
             }
@@ -119,12 +126,19 @@ namespace Neo.Plugins
         {
             string sessionString = _params[0]!.AsString();
             FairySession session = sessionStringToFairySession[sessionString];
+            JObject json = new();
             string nep2 = _params[1]!.AsString();
             string password = _params[2]!.AsString();
-            FairyWallet wallet = new FairyWallet(system.Settings, nep2:nep2, password:password);
-            session.engine.runtimeArgs.fairyWallet = wallet;
-            JObject json = new();
+            FairyWallet wallet = new FairyWallet(system.Settings, nep2: nep2, password: password);
             json[wallet.account.key.PublicKey.ToString()] = wallet.account.ScriptHash.ToString();
+            for (int i = 3; i < _params.Count; i += 2)
+            {
+                nep2 = _params[i]!.AsString();
+                password = _params[i+1]!.AsString();
+                wallet.CreateAccountFromNep2(nep2, password);
+                json[wallet.accounts.Last().key.PublicKey.ToString()] = wallet.accounts.Last().ScriptHash.ToString();
+            }
+            session.engine.runtimeArgs.fairyWallet = wallet;
             return json;
         }
 
@@ -133,12 +147,17 @@ namespace Neo.Plugins
         {
             string sessionString = _params[0]!.AsString();
             FairySession session = sessionStringToFairySession[sessionString];
-            string wif = _params.Count >= 2 ? _params[1]!.AsString() : "Fairy";
-            string password = _params.Count >= 3 ? _params[2]!.AsString() : "1";
-            FairyWallet wallet = new FairyWallet(wif, password: password, system.Settings);
-            session.engine.runtimeArgs.fairyWallet = wallet;
+            string wif = _params[1]!.AsString();
+            FairyWallet wallet = new FairyWallet(wif, system.Settings);
             JObject json = new();
             json[wallet.account.key.PublicKey.ToString()] = wallet.account.ScriptHash.ToString();
+            for (int i = 2; i < _params.Count; ++i)
+            {
+                wif = _params[i]!.AsString();
+                wallet.CreateAccountFromWif(wif);
+                json[wallet.accounts.Last().key.PublicKey.ToString()] = wallet.accounts.Last().ScriptHash.ToString();
+            }
+            session.engine.runtimeArgs.fairyWallet = wallet;
             return json;
         }
 
