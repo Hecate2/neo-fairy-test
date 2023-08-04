@@ -81,7 +81,7 @@ namespace Neo.Plugins
                 foreach (WalletAccount account in accounts)
                     if (account.ScriptHash == scriptHash)
                         return account;
-                return null;
+                return accounts[0];  // Return the default account! Otherwise it becomes difficult to simulate MakeTransaction for a single account
             }
             public override IEnumerable<WalletAccount> GetAccounts() => accounts;
             public override bool VerifyPassword(string password) => true;
