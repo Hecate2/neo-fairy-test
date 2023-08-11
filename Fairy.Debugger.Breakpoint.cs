@@ -66,6 +66,8 @@ namespace Neo.Plugins
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
             JObject json = new();
+            if (!contractScriptHashToAssemblyBreakpoints.ContainsKey(scriptHash))
+                return json;
             if (_params.Count == 1)  // delete all breakpoints
             {
                 List<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
