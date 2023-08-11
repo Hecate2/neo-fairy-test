@@ -67,12 +67,13 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        private void GetSourceCode(JObject json, UInt160 scripthash, uint instructionPointer)
+        private void GetSourceCode(JObject json, UInt160? scripthash, uint? instructionPointer)
         {
-            if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(scripthash)
-                && contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash].ContainsKey(instructionPointer))
+            if (scripthash != null && instructionPointer != null
+                && contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(scripthash)
+                && contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash].ContainsKey((uint)instructionPointer))
             {
-                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash][instructionPointer];
+                SourceFilenameAndLineNum sourceCodeBreakpoint = contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash][(uint)instructionPointer];
                 json["sourcefilename"] = sourceCodeBreakpoint.sourceFilename;
                 json["sourcelinenum"] = sourceCodeBreakpoint.lineNum;
                 json["sourcecontent"] = sourceCodeBreakpoint.sourceContent;
@@ -92,7 +93,7 @@ namespace Neo.Plugins
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
             json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
-            GetSourceCode(json, newEngine.CurrentScriptHash!, (uint)newEngine.CurrentContext!.InstructionPointer);
+            GetSourceCode(json, newEngine.CurrentScriptHash, (uint?)newEngine.CurrentContext?.InstructionPointer);
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
@@ -415,10 +416,10 @@ namespace Neo.Plugins
             Neo.VM.ExecutionContext invocationStackItem = newEngine.InvocationStack.ElementAt(invocationStackIndex);
             UInt160 invocationStackScriptHash = invocationStackItem.GetScriptHash();
             int instructionPointer = invocationStackItem.InstructionPointer;
-            JToken method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
+            JToken? method = GetMethodByInstructionPointer(new JArray(invocationStackScriptHash.ToString(), instructionPointer));
             JObject returnedJson = new();
             JArray staticVariables = (JArray)contractScriptHashToNefDbgNfo[invocationStackScriptHash]["static-variables"]!;
-            foreach (JString param in staticVariables)
+            foreach (JString? param in staticVariables)
             {
                 string[] nameTypeAndIndex = param!.AsString().Split(',');
                 int index = int.Parse(nameTypeAndIndex[2]);
