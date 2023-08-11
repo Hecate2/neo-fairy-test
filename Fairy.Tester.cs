@@ -68,7 +68,7 @@ namespace Neo.Plugins
             bool writeSnapshot = _params[1]!.AsBoolean();
             byte[] script = Convert.FromBase64String(_params[2]!.AsString());
             Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3]!, system.Settings) : null;
-            Witness[]? witnesses = _params.Count >= 4 ? WitnessesFromJson((JArray)_params[3]!) : null;
+            Witness[]? witnesses = _params.Count >= 5 ? WitnessesFromJson((JArray)_params[4]!) : null;
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 

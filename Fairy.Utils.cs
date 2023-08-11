@@ -37,7 +37,7 @@ namespace Neo.Plugins
             try
             {
                 Block dummyBlock = CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: sessionStringToFairySession[session].engine.runtimeArgs.timestamp);
-                Transaction tx = defaultFairyWallet.MakeTransaction(sessionStringToFairySession[session].engine.Snapshot, script, sender: signers[0].Account, persistingBlock: dummyBlock);
+                Transaction tx = defaultFairyWallet.MakeTransaction(sessionStringToFairySession[session].engine.Snapshot, script, sender: signers.Length > 0 ? signers[0].Account : defaultFairyWallet.GetAccounts().First().ScriptHash, persistingBlock: dummyBlock);
                 json["networkfee"] = tx.NetworkFee.ToString();
                 UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
                 sessionStringToFairySession[session].engine = FairyEngine.Run(script, snapshot.CreateSnapshot(), this, persistingBlock: dummyBlock, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: sessionStringToFairySession[session].engine);

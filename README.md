@@ -112,7 +112,7 @@ Here we do have some conflicting demands:
 2. Let the signatures (witnesses) be valid in the execution of smart contracts
 3. Calculate the network fee of the transaction
 
-**Now we are going to explain how these demands are achieved:**
+**Now we are going to explain how these demands are met:**
 
 For each invocation of function or script, you can assign the signers of this fairy transaction (let's call it T). Fairy builds T such that all the senders assigned by you are filled in the transaction. Then, T (**with signers & WitnessScopes claimed, but without actual signature**) is executed by FairyEngine and committed to the Fairy snapshot, **without verifying the signature**. During the execution in FairyEngine, all the witness checks can be passed.
 
