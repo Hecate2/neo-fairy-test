@@ -86,7 +86,7 @@ namespace Neo.Plugins
             UInt256 hash = UInt256.Parse(_params[0]!.AsString());
             bool verbose = _params.Count >= 2 && _params[1]!.AsBoolean();
             uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2]!.AsString()) : 2;
-            JToken json = GetConfirmedTransaction(hash, verbose);
+            JToken? json = GetConfirmedTransaction(hash, verbose);
             if (json != null)
                 return json;
             SemaphoreSlim signal = new SemaphoreSlim(0, 1);
@@ -178,6 +178,18 @@ namespace Neo.Plugins
             JObject json = new();
             foreach (var (key, value) in snapshot.Find(StorageKey.CreateSearchPrefix(contractState.Id, prefix)))
                 json[Convert.ToBase64String(key.Key.ToArray())] = Convert.ToBase64String(value.ToArray());
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JToken Deserialize(JArray _params)
+        {
+            JArray json = new();
+            foreach (JToken? param in _params)
+            {
+                string dataBase64 = param!.AsString();
+                json.Add(BinarySerializer.Deserialize(Convert.FromBase64String(dataBase64), ExecutionEngineLimits.Default).ToJson());
+            }
             return json;
         }
 
