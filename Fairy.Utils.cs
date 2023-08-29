@@ -159,15 +159,24 @@ namespace Neo.Plugins
         [RpcMethod]
         protected virtual JObject FindStorageWithSession(JArray _params)
         {
-            string session = _params[0]!.AsString();
+            string? session = _params[0]?.AsString();
             UInt160 contract = UInt160.Parse(_params[1]!.AsString());
             string keyBase64 = _params[2]!.AsString();
             byte[] prefix = Convert.FromBase64String(keyBase64);
 
-            FairyEngine oldEngine = sessionStringToFairySession[session].engine;
-            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
+            DataCache snapshot;
+            if (session == null)
+            {   // use current actual blockchain state, instead of a fairy session
+                snapshot = system.StoreView;
+            }
+            else
+            {
+                FairyEngine oldEngine = sessionStringToFairySession[session].engine;
+                snapshot = oldEngine.Snapshot;
+            }
+            ContractState contractState = NativeContract.ContractManagement.GetContract(snapshot, contract);
             JObject json = new();
-            foreach (var (key, value) in oldEngine.Snapshot.Find(StorageKey.CreateSearchPrefix(contractState.Id, prefix)))
+            foreach (var (key, value) in snapshot.Find(StorageKey.CreateSearchPrefix(contractState.Id, prefix)))
                 json[Convert.ToBase64String(key.Key.ToArray())] = Convert.ToBase64String(value.ToArray());
             return json;
         }
