@@ -73,6 +73,17 @@ namespace Neo.Plugins
             return contractState.ToJson();
         }
 
+        [RpcMethod]
+        protected virtual JToken ListContracts(JArray _params)
+        {
+            string? session = _params[0]?.AsString();
+            IEnumerable<ContractState> contractStates = NativeContract.ContractManagement.ListContracts(
+                session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot);
+            JArray json = new();
+            foreach (ContractState c in contractStates)
+                json.Add(c.ToJson());
+            return json;
+        }
 
         /// <summary>
         /// Wait until the transaction is included in blocks
