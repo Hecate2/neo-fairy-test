@@ -4,7 +4,7 @@
 
 No GAS fee is needed for your fairy transactions. This is a great help when your contract heavily manipulates GAS and you want to ensure correct GAS transferring. If you do need to compute the GAS system fee and network fee, just read `["networkfee"]` and `["gasconsumed"]` in the result of invoked fairy transactions. Network fee is calculated only when the correct wallet is opened and the transaction can be validly signed by the opened wallet.  
 
-Fairy can also debug your contracts. [DumpNef](https://github.com/devhawk/DumpNef) is needed for debugging. Build snapshots with testing APIs, and start debugging by setting debug info, setting breakpoints and invoking function with the debugging API. 
+Fairy can also debug your contracts. [DumpNef](https://github.com/Hecate2/DumpNef) is needed for debugging. Build snapshots with testing APIs, and start debugging by setting debug info, setting breakpoints and invoking function with the debugging API. 
 
 Detailed traceback is returned in result`["traceback"]` if there is any fault. Sample:
 
