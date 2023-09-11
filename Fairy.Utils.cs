@@ -85,38 +85,6 @@ namespace Neo.Plugins
             return json;
         }
 
-        /// <summary>
-        /// Wait until the transaction is included in blocks
-        /// </summary>
-        /// <param name="_params">UInt256String; bool(verbose); waitBlockCount</param>
-        /// <returns></returns>
-        /// <exception cref="RpcException"></exception>
-        [RpcMethod]
-        protected virtual JToken AwaitConfirmedTransaction(JArray _params)
-        {
-            UInt256 hash = UInt256.Parse(_params[0]!.AsString());
-            bool verbose = _params.Count >= 2 && _params[1]!.AsBoolean();
-            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2]!.AsString()) : 2;
-            JToken? json = GetConfirmedTransaction(hash, verbose);
-            if (json != null)
-                return json;
-            SemaphoreSlim signal = new SemaphoreSlim(0, 1);
-            uint count = 0;
-            CommittedHandler getConfirmedTransactionAfterCommitted = delegate(NeoSystem @system, Block @block){ json = GetConfirmedTransaction(hash, verbose); count += 1; signal.Release(); };
-            Blockchain.Committed += getConfirmedTransactionAfterCommitted;
-            while (count < waitBlockCount)
-            {
-                signal.Wait();
-                if (json != null)
-                {
-                    Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
-                    return json;
-                }
-            }
-            Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
-            throw new RpcException(-100, $"Transaction not found in {waitBlockCount} blocks");
-        }
-
         [RpcMethod]
         protected virtual JObject PutStorageWithSession(JArray _params)
         {
@@ -281,6 +249,53 @@ namespace Neo.Plugins
                 json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
                 return json;
             }
+        }
+
+        [RpcMethod]
+        protected virtual JToken GetManyUnclaimedGas(JArray _params)
+        {
+            string? session = _params[0]?.AsString();
+            DataCache snapshot = session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot;
+            uint nextBlockIndex = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+            JObject json = new JObject();
+            for (int i = 1; i < _params.Count; ++i)
+            {
+                UInt160 account = UInt160.Parse(_params[i]!.AsString());
+                json[account.ToString()] = NativeContract.NEO.UnclaimedGas(snapshot, account, nextBlockIndex).ToString();
+            }
+            return json;
+        }
+
+        /// <summary>
+        /// Wait until the transaction is included in blocks
+        /// </summary>
+        /// <param name="_params">UInt256String; bool(verbose); waitBlockCount</param>
+        /// <returns></returns>
+        /// <exception cref="RpcException"></exception>
+        [RpcMethod]
+        protected virtual JToken AwaitConfirmedTransaction(JArray _params)
+        {
+            UInt256 hash = UInt256.Parse(_params[0]!.AsString());
+            bool verbose = _params.Count >= 2 && _params[1]!.AsBoolean();
+            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2]!.AsString()) : 2;
+            JToken? json = GetConfirmedTransaction(hash, verbose);
+            if (json != null)
+                return json;
+            SemaphoreSlim signal = new SemaphoreSlim(0, 1);
+            uint count = 0;
+            CommittedHandler getConfirmedTransactionAfterCommitted = delegate (NeoSystem @system, Block @block) { json = GetConfirmedTransaction(hash, verbose); count += 1; signal.Release(); };
+            Blockchain.Committed += getConfirmedTransactionAfterCommitted;
+            while (count < waitBlockCount)
+            {
+                signal.Wait();
+                if (json != null)
+                {
+                    Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
+                    return json;
+                }
+            }
+            Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
+            throw new RpcException(-100, $"Transaction not found in {waitBlockCount} blocks");
         }
 
         protected JToken? GetConfirmedTransaction(UInt256 hash, bool verbose)
