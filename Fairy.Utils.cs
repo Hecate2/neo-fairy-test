@@ -62,6 +62,32 @@ namespace Neo.Plugins
             return json;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="_params">
+        /// multiple UInt256 or uint indexes
+        /// 2 indexes, 1st index <= 2nd index: get all blocks between these indexes
+        /// other cases: get all blocks defined by each param
+        /// </param>
+        /// <returns></returns>
+        [RpcMethod]
+        protected virtual JToken GetManyBlocks(JArray _params)
+        {
+            using var snapshot = system.GetSnapshot();
+            JArray result = new();
+            if (_params.Count == 2 && _params[0] is JNumber && _params[1] is JNumber)
+                for (uint i = uint.Parse(_params[0]!.AsString()); i <= uint.Parse(_params[1]!.AsString()); ++i)
+                    result.Add(NativeContract.Ledger.GetBlock(snapshot, i).ToJson(system.Settings));
+            if (result.Count == 0)
+                foreach (JToken? key in _params)
+                    if (key is JNumber)
+                        result.Add(NativeContract.Ledger.GetBlock(snapshot, uint.Parse(key.AsString())).ToJson(system.Settings));
+                    else
+                        result.Add(NativeContract.Ledger.GetBlock(snapshot, UInt256.Parse(key!.AsString())).ToJson(system.Settings));
+            return result;
+        }
+
         [RpcMethod]
         protected virtual JToken GetContract(JArray _params)
         {
@@ -337,18 +363,6 @@ namespace Neo.Plugins
             json["sysfee"] = tx.SystemFee.ToString();
             json["netfee"] = tx.NetworkFee.ToString();
             return json;
-        }
-
-        protected static JObject NativeContractToJson(NativeContract contract, ProtocolSettings settings)
-        {
-            return new JObject
-            {
-                ["id"] = contract.Id,
-                ["hash"] = contract.Hash.ToString(),
-                ["nef"] = contract.Nef.ToJson(),
-                ["manifest"] = contract.Manifest.ToJson(),
-                ["updatehistory"] = settings.NativeUpdateHistory[contract.Name].Select(p => (JToken)p).ToArray()
-            };
         }
 
         protected static JObject ToJson(StackItem item, int max)
