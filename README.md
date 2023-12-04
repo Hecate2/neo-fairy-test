@@ -72,7 +72,7 @@ You probably have to change the directories of dependencies in `Fairy.csproj`
 
 #### Usage
 
-1. Place Fairy as a plugin of neo-cli (`neo-cli/bin/Debug/net6.0/Plugins/Fairy/{Fairy.dll + config.json}`). **Happy testing on the mainnet**!  Since you can run all the fairy transactions virtually, it is recommended to use the mainnet in order to have access to the real environment for production. 
+1. Place Fairy as a plugin of neo-cli (`neo-cli/bin/Debug/net7.0/Plugins/Fairy/{Fairy.dll + config.json + Fairy.json}`). **Happy testing on the mainnet**!  Since you can run all the fairy transactions virtually, **it is recommended to use the mainnet** in order to have access to the real environment for production. 
 2. Please read the source codes for help about APIs. I have not written any docs.
 3. Non official client: https://github.com/Hecate2/neo-test-client . Watch the fully automatic and repeatable test cases in the repository if you do not know how to use Fairy. 
 4. Create new empty wallets for testing. Fairy is derived from RpcServer which can really relay transactions that affects your wallet. To prevent mis-operation, it is not recommended to use wallets with any value of asset. You can virtually set your asset balance with Fairy. 
