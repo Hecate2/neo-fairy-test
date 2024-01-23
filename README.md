@@ -84,6 +84,10 @@ You probably have to change the directories of dependencies in `Fairy.csproj`
 10. The debugger shall break on breakpoints or exceptions. Use APIs in [Fairy.Debugger.cs](Fairy.Debugger.cs) for happy debugging!
 11. Try the command `fairy` in `neo-cli`, which lists all of your snapshots and DebugInfo! Just type `fairy` in the black cli window (which prints `Fairy server running at X.X.X.X:XXXX` when initialized) and press `ENTER`. 
 
+#### Playing with oracles?
+
+[Do what is needed to trigger the oracle](https://github.com/Hecate2/neo-fairy-client/blob/master/test_oracle.py) (with a fairy session). If the oracle is activated, there will be info in `['result']['oraclerequests']` in the returned content of `invokeFuntionWithSession`. Then **pretend that you are the oracle contract** (Use signer == OracleContract `0xfe924b7cfe89ddd271abaf7210a80a7e11178758`. Fairy accepts any signer even without signature!), and call the callback method in your smart contract.
+
 #### WebSocket features
 
 Quick example: connect to `ws://localhost:16869` and send
