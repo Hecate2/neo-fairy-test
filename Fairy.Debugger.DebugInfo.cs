@@ -39,7 +39,7 @@ namespace Neo.Plugins
                 using var ms = new MemoryStream();
                 unzippedEntryStream.CopyTo(ms);
                 var unzippedArray = ms.ToArray();
-                return Encoding.Default.GetString(unzippedArray);
+                return Encoding.UTF8.GetString(unzippedArray);
             }
             throw new ArgumentException("No file found in zip archive");
         }
