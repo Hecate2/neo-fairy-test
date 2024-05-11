@@ -70,6 +70,8 @@ Alternatively you can use `Fairy.sln` to build your own solution.
 
 You probably have to change the directories of dependencies in `Fairy.csproj`
 
+**Neo 3.7.1 Instructions: Clone the repository neo into neo-modules. Modify neo/src/Neo/SmartContract/ApplicationEngine.cs, changing the methods `OnSysCall` and `OnCallT` from `private` to `protected`**. You may refer to https://github.com/neo-project/neo/pull/3225/files .
+
 #### Usage
 
 1. Place Fairy as a plugin of neo-cli (`neo-cli/bin/Debug/net7.0/Plugins/Fairy/{Fairy.dll + config.json + Fairy.json}`). You may also need to place an [RpcServer.dll](https://github.com/neo-project/neo-modules/releases) at `neo-cli/bin/Debug/net7.0`. **Happy testing on the mainnet**!  Since you can run all the fairy transactions virtually, **it is recommended to use the mainnet** in order to have access to the real environment for production. 
