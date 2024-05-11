@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFrameworks>net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\neo-node-mainnet\Neo.ConsoleService\Neo.ConsoleService.csproj" />
-    <ProjectReference Include="..\..\..\neo\src\Neo.Json\Neo.Json.csproj" />
+    <ProjectReference Include="..\..\neo\src\Neo.Json\Neo.Json.csproj" />
     <ProjectReference Include="..\RpcServer\RpcServer.csproj" />
   </ItemGroup>
 

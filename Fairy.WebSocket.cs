@@ -160,7 +160,7 @@ namespace Neo.Plugins
                 }
                 string method = request["method"]!.AsString();
                 if (/*!CheckAuth(context) || */settings.DisabledMethods.Contains(method))
-                    throw new RpcException(-400, "Method disabled by server settings");
+                    throw new RpcException(RpcError.InternalServerError.WithData("Method disabled by server settings"));
                 JToken @params = request["params"] ?? new JArray();
                 if (webSocketNeoGoCompatibleMethods.TryGetValue(method, out var wsFuncNeoGoCompatible))
                 {
@@ -237,7 +237,7 @@ namespace Neo.Plugins
                     }
                 }
                 else
-                    throw new RpcException(-32601, "Method not found");
+                    throw new RpcException(RpcError.InternalServerError.WithData("Method not found"));
             }
         }
     }

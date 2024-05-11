@@ -178,7 +178,7 @@ namespace Neo.Plugins
 
             JObject json = new();
             KeyPair keyPair = signatureWallet.GetAccounts().First().GetKey();
-            json["signed"] = Convert.ToBase64String(Crypto.Sign(message, keyPair.PrivateKey, keyPair.PublicKey.EncodePoint(false)[1..]));
+            json["signed"] = Convert.ToBase64String(Crypto.Sign(message, keyPair.PrivateKey, Cryptography.ECC.ECCurve.Secp256r1, Hasher.SHA256));
             return json;
         }
 
@@ -211,7 +211,7 @@ namespace Neo.Plugins
                 Attributes = Array.Empty<TransactionAttribute>(),
             };
             tx.SystemFee = systemFee;
-            tx.NetworkFee = networkFee ?? signatureWallet.CalculateNetworkFee(snapshotForSignature, tx);
+            tx.NetworkFee = networkFee ?? tx.CalculateNetworkFee(snapshotForSignature, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script);
 
             ContractParametersContext context = new(snapshotForSignature, tx, system.Settings.Network);
             signatureWallet.Sign(context);

@@ -29,7 +29,8 @@ namespace Neo.Plugins
         public class FairyEngine : ApplicationEngine
         {
             readonly Fairy fairy;
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, Fairy fairy, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false) : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic)
+            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, Fairy fairy, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
+                : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, jumpTable: ComposeFairyJumpTable())
             {
                 this.fairy = fairy;
                 if (oldEngine != null)
@@ -100,7 +101,7 @@ namespace Neo.Plugins
 
             public Dictionary<uint, InteropDescriptor> services;
 
-            public class RuntimeArgs: ICloneable
+            public class RuntimeArgs : ICloneable
             {
                 public RuntimeArgs(Wallet fairyWallet)
                 {
@@ -115,9 +116,27 @@ namespace Neo.Plugins
             }
             public RuntimeArgs runtimeArgs;
 
-            protected override void OnSysCall(uint method)
+            protected static JumpTable ComposeFairyJumpTable()
             {
-                OnSysCall(this.services[method]);
+                var table = new JumpTable();
+
+                table[OpCode.SYSCALL] = OnSysCall;
+                table[OpCode.CALLT] = OnCallT;
+
+                return table;
+            }
+
+            protected static new void OnSysCall(ExecutionEngine engine, Instruction instruction)
+            {
+                if (engine is FairyEngine fairyEngine)
+                {
+                    uint method = instruction.TokenU32;
+                    fairyEngine.OnSysCall(fairyEngine.services[method]);
+                }
+                else
+                {
+                    throw new InvalidOperationException();
+                }
             }
 
             public InteropDescriptor Register(string name, MethodInfo method, uint hash, long fixedPrice, CallFlags requiredCallFlags)

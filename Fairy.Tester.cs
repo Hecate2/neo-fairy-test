@@ -195,7 +195,7 @@ namespace Neo.Plugins
                 {
                     Wallet signatureWallet = oldEngine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : oldEngine.runtimeArgs.fairyWallet;
                     json["tx"] = Convert.ToBase64String(tx.ToArray());
-                    json["networkfee"] = signatureWallet.CalculateNetworkFee(oldEngine.Snapshot, tx).ToString();
+                    json["networkfee"] = tx.CalculateNetworkFee(oldEngine.Snapshot, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script).ToString();
                 }
             }
             return json;
@@ -233,7 +233,7 @@ namespace Neo.Plugins
                 tx.Witnesses = defaultWitness;
             }
             result["tx"] = Convert.ToBase64String(tx.ToArray());
-            result["networkfee"] = signatureWallet.CalculateNetworkFee(snapshotForSignature, tx).ToString();
+            result["networkfee"] = tx.CalculateNetworkFee(snapshotForSignature, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script).ToString();
             if (!context.Completed)
             {
                 result["pendingsignature"] = context.ToJson();

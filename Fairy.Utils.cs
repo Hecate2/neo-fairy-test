@@ -321,7 +321,7 @@ namespace Neo.Plugins
                 }
             }
             Blockchain.Committed -= getConfirmedTransactionAfterCommitted;
-            throw new RpcException(-100, $"Transaction not found in {waitBlockCount} blocks");
+            throw new RpcException(RpcError.InternalServerError.WithData($"Transaction not found in {waitBlockCount} blocks"));
         }
 
         protected JToken? GetConfirmedTransaction(UInt256 hash, bool verbose)
