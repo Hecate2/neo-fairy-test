@@ -3,9 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fairy", "Fairy.csproj", "{4341DCDB-ED96-48E3-9F6C-AFBE1C2C9B7D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Fairy", "src\fairy\Fairy.csproj", "{03E1F3E3-1C57-4EC2-9AE1-18686079992C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RpcServer", "..\neo-modules\src\RpcServer\RpcServer.csproj", "{7E26B998-1077-49E2-963F-B2166019B6F9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{479E4FCF-AF75-48CE-BE80-5896D5037873}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F950DE49-9A04-4E9C-8822-B7DC9F731C54}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,17 +19,16 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4341DCDB-ED96-48E3-9F6C-AFBE1C2C9B7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4341DCDB-ED96-48E3-9F6C-AFBE1C2C9B7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4341DCDB-ED96-48E3-9F6C-AFBE1C2C9B7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4341DCDB-ED96-48E3-9F6C-AFBE1C2C9B7D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7E26B998-1077-49E2-963F-B2166019B6F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7E26B998-1077-49E2-963F-B2166019B6F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7E26B998-1077-49E2-963F-B2166019B6F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7E26B998-1077-49E2-963F-B2166019B6F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03E1F3E3-1C57-4EC2-9AE1-18686079992C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03E1F3E3-1C57-4EC2-9AE1-18686079992C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03E1F3E3-1C57-4EC2-9AE1-18686079992C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03E1F3E3-1C57-4EC2-9AE1-18686079992C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{03E1F3E3-1C57-4EC2-9AE1-18686079992C} = {479E4FCF-AF75-48CE-BE80-5896D5037873}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2AE9921F-70DE-4421-981B-DBD16EDE9FAB}
