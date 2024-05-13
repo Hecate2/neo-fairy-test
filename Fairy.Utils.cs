@@ -127,7 +127,6 @@ namespace Neo.Plugins
             testSession.engine.Snapshot.Delete(storageKey);
             if (value.Length > 0)
                 testSession.engine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(value));
-            testSession.engine.Snapshot.Commit();
             JObject json = new();
             json[keyBase64] = valueBase64;
             return new JObject();
