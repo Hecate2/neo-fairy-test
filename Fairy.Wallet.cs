@@ -36,7 +36,7 @@ namespace Neo.Plugins
             public override string Name => "Fairy";
             public override Version Version => Version.Parse("68");
 
-            public FairyWallet(ProtocolSettings settings, string nep2="6PYKrXGB2bhiux49bKYJPMMpaVic6SRrJcCLC8tdrz3YPLgktpe3H3PN35", string password="1", int N = 16384, int r = 8, int p = 8): base("./fairy/path", settings) => CreateAccountFromNep2(nep2, password, N, r, p);
+            public FairyWallet(ProtocolSettings settings, string nep2 = "6PYKrXGB2bhiux49bKYJPMMpaVic6SRrJcCLC8tdrz3YPLgktpe3H3PN35", string password = "1", int N = 16384, int r = 8, int p = 8) : base("./fairy/path", settings) => CreateAccountFromNep2(nep2, password, N, r, p);
             public FairyWallet(string wif, ProtocolSettings settings) : base("./fairy/path", settings) => CreateAccountFromWif(wif);
             public override bool ChangePassword(string oldPassword, string newPassword) => throw new NotImplementedException($"Password is unnecessary for {nameof(FairyWallet)}");
             public override bool Contains(UInt160 scriptHash) => GetAccount(scriptHash) != null;
@@ -89,7 +89,7 @@ namespace Neo.Plugins
         }
 
         protected Wallet defaultFairyWallet;
-        protected Witness[] defaultWitness = { new Witness { InvocationScript=(new byte[2] { 0x0c, 0x40 }).Concat(new byte[64]).ToArray(), VerificationScript=(new byte[2] { 0x0c, 0x21 }).Concat(new byte[33]).Concat(new byte[5] { 0x41, 0x56, 0xe7, 0xb3, 0x27 }).ToArray() } };
+        protected Witness[] defaultWitness = { new Witness { InvocationScript = (new byte[2] { 0x0c, 0x40 }).Concat(new byte[64]).ToArray(), VerificationScript = (new byte[2] { 0x0c, 0x21 }).Concat(new byte[33]).Concat(new byte[5] { 0x41, 0x56, 0xe7, 0xb3, 0x27 }).ToArray() } };
 
         [RpcMethod]
         protected virtual JToken OpenDefaultFairyWallet(JArray _params)
@@ -100,11 +100,11 @@ namespace Neo.Plugins
             switch (GetExtension(path))
             {
                 case ".json":
-                {
-                    NEP6Wallet nep6wallet = new(path, password, system.Settings);
-                    defaultFairyWallet = nep6wallet;
-                    break;
-                }
+                    {
+                        NEP6Wallet nep6wallet = new(path, password, system.Settings);
+                        defaultFairyWallet = nep6wallet;
+                        break;
+                    }
                 default:
                     throw new NotSupportedException();
             }
@@ -134,7 +134,7 @@ namespace Neo.Plugins
             for (int i = 3; i < _params.Count; i += 2)
             {
                 nep2 = _params[i]!.AsString();
-                password = _params[i+1]!.AsString();
+                password = _params[i + 1]!.AsString();
                 wallet.CreateAccountFromNep2(nep2, password);
                 json[wallet.accounts.Last().key.PublicKey.ToString()] = wallet.accounts.Last().ScriptHash.ToString();
             }

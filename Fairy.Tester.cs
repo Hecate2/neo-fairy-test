@@ -1,13 +1,13 @@
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
-using System.Numerics;
 using System.Collections.Concurrent;
-using Neo.Persistence;
+using System.Numerics;
 
 namespace Neo.Plugins
 {
@@ -111,10 +111,10 @@ namespace Neo.Plugins
                 notificationJson["eventname"] = notification.EventName;
                 notificationJson["eventargs"] = notification.State.ToJson();
                 notifications.Add(notificationJson);
-                if(newEngine.Notifications[i].EventName == "OracleRequest")
+                if (newEngine.Notifications[i].EventName == "OracleRequest")
                 {
                     int oracleContractId = NativeContract.Oracle.Id;
-                    ulong requestId = (ulong)(new BigInteger(newEngine.Snapshot.TryGet(new StorageKey { Id=oracleContractId, Key=new byte[] { 9 } }).Value.ToArray()) - 1);
+                    ulong requestId = (ulong)(new BigInteger(newEngine.Snapshot.TryGet(new StorageKey { Id = oracleContractId, Key = new byte[] { 9 } }).Value.ToArray()) - 1);
                     OracleRequest oracleRequest = newEngine.Snapshot.TryGet(new KeyBuilder(oracleContractId, 7).AddBigEndian(requestId)).GetInteroperable<OracleRequest>();
                     //if (!Uri.TryCreate(oracleRequest.Url, UriKind.Absolute, out var uri))
                     //    break;
@@ -142,7 +142,7 @@ namespace Neo.Plugins
             json["state"] = newEngine.State;
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
-            if(json["exception"] != null)
+            if (json["exception"] != null)
             {
                 string traceback = "";
                 try { if (newEngine.CallingScriptHash != null) traceback += $"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"; } catch { }

@@ -35,7 +35,7 @@ namespace Neo.Plugins
             JObject opcodeCoverage = GetContractOpCodeCoverage(_params);
             UInt160 scripthash = UInt160.Parse(_params[0]!.AsString());
             JObject result = new();
-            foreach((uint opcode, SourceFilenameAndLineNum source) in contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash])
+            foreach ((uint opcode, SourceFilenameAndLineNum source) in contractScriptHashToAllInstructionPointerToSourceLineNum[scripthash])
             {
                 string key = $"{source.sourceFilename}::line {source.lineNum}: {source.sourceContent}";
                 if (result[key] == null)

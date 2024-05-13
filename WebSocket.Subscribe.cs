@@ -25,7 +25,7 @@ namespace Neo.Plugins
             public WebSocket webSocket;
             public string method;
             public JObject @params;
-            public JObject ToJson()
+            public readonly JObject ToJson()
             {
                 JObject json = new();
                 json["id"] = subscriptionId;
@@ -145,7 +145,7 @@ namespace Neo.Plugins
                         continue;  // wanted sender not in tx.Sender or tx.Signers; do not send anything in websocket
                     }
                 }
-            sendMessage:
+sendMessage:
                 JObject returnedJson = new();
                 returnedJson["jsonrpc"] = "2.0";
                 returnedJson["method"] = "transaction_added";
@@ -253,7 +253,7 @@ namespace Neo.Plugins
                         if (_params.ContainsProperty("state") && _params["state"]!.AsString() != Enum.GetName(app.VMState))
                             continue;
                     }
-                sendMessage:
+sendMessage:
                     JObject returnedJson = new();
                     returnedJson["jsonrpc"] = "2.0";
                     returnedJson["method"] = "transaction_executed";
@@ -281,7 +281,7 @@ namespace Neo.Plugins
             subscriptionId += 1;
             // subscriptionIdSemaphore.Release();  // after return
 
-            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId=newId, webSocket=webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1]! : new JObject() };
+            WebSocketSubscriptionNeoGoCompatible subscription = new WebSocketSubscriptionNeoGoCompatible { subscriptionId = newId, webSocket = webSocket, method = methodName, @params = _params.Count > 1 ? (JObject)_params[1]! : new JObject() };
             methodNameToSubscriptions[methodName].Add(subscription);
             idToSubscriptions[newId] = subscription;
             return newId;

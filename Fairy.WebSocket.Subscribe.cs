@@ -133,8 +133,8 @@ namespace Neo.Plugins
         [WebsocketMethod]
         protected virtual Action SubscribeContractEvent(WebSocket webSocket, JArray _params, CancellationToken cancellationToken)
         {
-            HashSet<UInt160> contracts =  _params.Count > 0 ? ((JArray)_params[0]!).Select(v => UInt160.Parse(v!.AsString())).ToHashSet() : new();
-            HashSet<string> eventNames =  _params.Count > 1 ? ((JArray)_params[1]!).Select(v => v!.AsString().ToLower()).ToHashSet() : new();
+            HashSet<UInt160> contracts = _params.Count > 0 ? ((JArray)_params[0]!).Select(v => UInt160.Parse(v!.AsString())).ToHashSet() : new();
+            HashSet<string> eventNames = _params.Count > 1 ? ((JArray)_params[1]!).Select(v => v!.AsString().ToLower()).ToHashSet() : new();
             return async () =>
             {
                 SemaphoreSlim semaphore = new(1);

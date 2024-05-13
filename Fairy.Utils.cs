@@ -48,7 +48,7 @@ namespace Neo.Plugins
             {
                 if (ex.InnerException == null)
                 {
-                    throw ex;
+                    throw;
                 }
                 if (ex.InnerException.Message.StartsWith("Contract Already Exists: "))
                 {
@@ -123,10 +123,10 @@ namespace Neo.Plugins
 
             FairySession testSession = sessionStringToFairySession[session];
             ContractState contractState = NativeContract.ContractManagement.GetContract(testSession.engine.Snapshot, contract);
-            StorageKey storageKey = new StorageKey { Id=contractState.Id, Key=key };
+            StorageKey storageKey = new StorageKey { Id = contractState.Id, Key = key };
             testSession.engine.Snapshot.Delete(storageKey);
             if (value.Length > 0)
-                testSession.engine.Snapshot.Add(new StorageKey { Id=contractState.Id, Key=key }, new StorageItem(value));
+                testSession.engine.Snapshot.Add(new StorageKey { Id = contractState.Id, Key = key }, new StorageItem(value));
             JObject json = new();
             json[keyBase64] = valueBase64;
             return new JObject();
@@ -148,14 +148,14 @@ namespace Neo.Plugins
             {   // use current actual blockchain state, instead of a fairy session
                 DataCache storeView = system.StoreView;
                 contractState = NativeContract.ContractManagement.GetContract(storeView, contract);
-                item = storeView.TryGet(new StorageKey { Id=contractState.Id, Key=key });
+                item = storeView.TryGet(new StorageKey { Id = contractState.Id, Key = key });
                 json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value.ToArray());
                 return json;
             }
 
             FairyEngine oldEngine = sessionStringToFairySession[session].engine;
             contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
-            item = oldEngine.Snapshot.TryGet(new StorageKey { Id=contractState.Id, Key=key });
+            item = oldEngine.Snapshot.TryGet(new StorageKey { Id = contractState.Id, Key = key });
             json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value.ToArray());
             return json;
         }
@@ -247,9 +247,9 @@ namespace Neo.Plugins
             {
                 prefixAccount = Native_Prefix_Account;
                 byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
-                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(new AccountState()));
+                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id = contractState.Id, Key = key }, () => new StorageItem(new AccountState()));
                 AccountState state = storage.GetInteroperable<AccountState>();
-                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
+                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id = contractState.Id, Key = new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
                 storage.Add(balance - state.Balance);
                 state.Balance = balance;
                 json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
@@ -259,9 +259,9 @@ namespace Neo.Plugins
             {
                 prefixAccount = Native_Prefix_Account;
                 byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
-                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(new NeoToken.NeoAccountState()));
+                StorageItem storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id = contractState.Id, Key = key }, () => new StorageItem(new NeoToken.NeoAccountState()));
                 NeoToken.NeoAccountState state = storage.GetInteroperable<NeoToken.NeoAccountState>();
-                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
+                storage = oldEngine.Snapshot.GetAndChange(new StorageKey { Id = contractState.Id, Key = new byte[] { Native_Prefix_TotalSupply } }, () => new StorageItem(BigInteger.Zero));
                 storage.Add(balance - state.Balance);
                 state.Balance = balance;
                 json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
@@ -270,7 +270,7 @@ namespace Neo.Plugins
             else
             {
                 byte[] key = new byte[] { prefixAccount }.Concat(account.ToArray()).ToArray();
-                oldEngine.Snapshot.GetAndChange(new StorageKey { Id=contractState.Id, Key=key }, () => new StorageItem(balanceBytes));
+                oldEngine.Snapshot.GetAndChange(new StorageKey { Id = contractState.Id, Key = key }, () => new StorageItem(balanceBytes));
                 json[Convert.ToBase64String(key)] = Convert.ToBase64String(balanceBytes);
                 return json;
             }

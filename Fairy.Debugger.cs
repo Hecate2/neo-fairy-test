@@ -12,12 +12,12 @@ namespace Neo.Plugins
     {
         enum BreakReason
         {
-            None=0,
-            AssemblyBreakpoint=1<<0,
-            SourceCodeBreakpoint=1<<1,
-            Call=1<<2,
-            Return=1<<3,
-            SourceCode=1<<4
+            None = 0,
+            AssemblyBreakpoint = 1 << 0,
+            SourceCodeBreakpoint = 1 << 1,
+            Call = 1 << 2,
+            Return = 1 << 3,
+            SourceCode = 1 << 4
         }
 
         [RpcMethod]

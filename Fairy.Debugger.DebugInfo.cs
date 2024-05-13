@@ -1,8 +1,8 @@
 using Neo.Json;
-using Neo.VM;
 using Neo.SmartContract.Native;
-using System.IO.Compression;
+using Neo.VM;
 using System.Collections.Concurrent;
+using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -91,7 +91,7 @@ namespace Neo.Plugins
                         uint instructionPointer = uint.Parse(opcodeGroups[1].ToString());
                         string filename = sourceCodeGroups[1].ToString();
                         filenames.Add(filename);
-                        SourceFilenameAndLineNum sourceFilenameAndLineNum = new SourceFilenameAndLineNum { sourceFilename=filename, lineNum=sourceCodeLineNum };// , sourceContent = sourceCodeGroups[3].ToString() };
+                        SourceFilenameAndLineNum sourceFilenameAndLineNum = new SourceFilenameAndLineNum { sourceFilename = filename, lineNum = sourceCodeLineNum };// , sourceContent = sourceCodeGroups[3].ToString() };
                         InstructionPointerToSourceLineNum[instructionPointer] = sourceFilenameAndLineNum;
                         sourceFilenameAndLineNums.Add(sourceFilenameAndLineNum);
                     }

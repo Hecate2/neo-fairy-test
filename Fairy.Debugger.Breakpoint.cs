@@ -25,7 +25,7 @@ namespace Neo.Plugins
                 contractScriptHashToAssemblyBreakpoints[scriptHash] = assemblyBreakpoints;
             }
             JObject json = new();
-            for (int i = 1; i<_params.Count; i++)
+            for (int i = 1; i < _params.Count; i++)
             {
                 string breakpointInstructionPointerStr = _params[i]!.AsString();
                 uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
@@ -81,7 +81,7 @@ namespace Neo.Plugins
             else
             {
                 HashSet<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash];
-                for (int i = 1; i<_params.Count; i++)
+                for (int i = 1; i < _params.Count; i++)
                 {
                     string breakpointInstructionPointerStr = _params[i]!.AsString();
                     uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
@@ -115,7 +115,7 @@ namespace Neo.Plugins
                 uint sourceCodeBreakpointLineNum = uint.Parse(_params[i]!.AsString());
                 i++;
                 JObject json = new();
-                SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { sourceFilename=sourceCodeFilename, lineNum=sourceCodeBreakpointLineNum };
+                SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { sourceFilename = sourceCodeFilename, lineNum = sourceCodeBreakpointLineNum };
                 if (contractScriptHashToSourceLineNums[scriptHash].Contains(breakpoint))
                 {
                     sourceCodeBreakpoints.Add(breakpoint);
@@ -186,7 +186,7 @@ namespace Neo.Plugins
                     i++;
                     uint sourceCodeBreakpointLineNum = uint.Parse(_params[i]!.AsString());
                     i++;
-                    if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { sourceFilename=sourceCodeBreakpointFilename, lineNum=sourceCodeBreakpointLineNum }))
+                    if (sourceCodeBreakpoints.Remove(new SourceFilenameAndLineNum { sourceFilename = sourceCodeBreakpointFilename, lineNum = sourceCodeBreakpointLineNum }))
                     {
                         JObject json = new();
                         json["filename"] = sourceCodeBreakpointFilename;

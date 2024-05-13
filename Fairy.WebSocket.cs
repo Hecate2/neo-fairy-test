@@ -1,5 +1,3 @@
-using Neo.ConsoleService;
-using Neo.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -7,11 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Neo.ConsoleService;
+using Neo.Json;
 //using System.IO.Compression;
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-using System.Reflection;
 using System.Net.WebSockets;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Neo.Plugins
 {
@@ -110,7 +110,7 @@ namespace Neo.Plugins
             .Build();
 
             websocketHost.Start();
-            ConsoleHelper.Info($"Fairy websocket server running at {settings.BindAddress}:{settings.Port+1}\n");
+            ConsoleHelper.Info($"Fairy websocket server running at {settings.BindAddress}:{settings.Port + 1}\n");
         }
 
         public struct WebSocketSubscription
@@ -118,7 +118,7 @@ namespace Neo.Plugins
             public string method;
             public JToken @params;
             public CancellationTokenSource cancellationTokenSource;
-            public JObject ToJson()
+            public readonly JObject ToJson()
             {
                 JObject json = new();
                 json["method"] = method;
@@ -133,7 +133,7 @@ namespace Neo.Plugins
             context.Response.Headers["Access-Control-Allow-Origin"] = "*";
             context.Response.Headers["Access-Control-Max-Age"] = "31536000";
             using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            byte[] buffer = new byte[4*1024];
+            byte[] buffer = new byte[4 * 1024];
 
             LinkedList<object> webSocketSubscriptions = new();
 
@@ -190,8 +190,8 @@ namespace Neo.Plugins
                     switch (wsFunc(webSocket, (JArray)@params, cancellationToken))
                     {
                         case Action action:
-                            _=Task.Run(action);
-                            webSocketSubscriptions.AddLast(new WebSocketSubscription { method = method, @params = @params, cancellationTokenSource=cancellationTokenSource });
+                            _ = Task.Run(action);
+                            webSocketSubscriptions.AddLast(new WebSocketSubscription { method = method, @params = @params, cancellationTokenSource = cancellationTokenSource });
                             if (request["needresponse"]?.AsBoolean() is true)
                             {
                                 JObject response = new();

@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
 using Neo.SmartContract.Native;
-using Microsoft.Extensions.Configuration;
 using System.Runtime.Serialization.Formatters;
 
 namespace Neo.Plugins
@@ -22,7 +22,7 @@ namespace Neo.Plugins
 
         Settings settings;
         NeoSystem system;
-        List<Fairy> fairyServers = new();
+        readonly List<Fairy> fairyServers = new();
 
         protected override void Configure()
         {
