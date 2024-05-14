@@ -179,15 +179,25 @@ namespace Neo.Plugins
                 actualBreakReason |= BreakReason.Return;
                 return engine;
             }
-            uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
-            UInt160 currentScripthash = engine.CurrentScriptHash;
+            uint prevInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
+            UInt160 prevScriptHash = engine.CurrentScriptHash;
+            SourceFilenameAndLineNum prevSource = defaultSource;
+            if (contractScriptHashToAllSourceLineNums.ContainsKey(prevScriptHash)
+                 && contractScriptHashToAllInstructionPointerToSourceLineNum[prevScriptHash].ContainsKey(prevInstructionPointer)
+                 && contractScriptHashToAllSourceLineNums[prevScriptHash]
+                    .Contains(contractScriptHashToAllInstructionPointerToSourceLineNum[prevScriptHash][prevInstructionPointer]))
+                prevSource = contractScriptHashToAllInstructionPointerToSourceLineNum[prevScriptHash][prevInstructionPointer];
             engine.ExecuteNext();
-            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(currentScripthash) && contractScriptHashToInstructionPointerToCoverage[currentScripthash].ContainsKey(currentInstructionPointer))
-                contractScriptHashToInstructionPointerToCoverage[currentScripthash][currentInstructionPointer] = true;
+            // Set coverage for the previous instruction
+            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(prevScriptHash)
+                && contractScriptHashToInstructionPointerToCoverage[prevScriptHash]
+                .ContainsKey(prevInstructionPointer))
+                contractScriptHashToInstructionPointerToCoverage[prevScriptHash][prevInstructionPointer] = true;
             if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
                 return engine;
+            // Handle the current instruction
             UInt160 currentScriptHash = engine.CurrentScriptHash;
-            currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
+            uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
             if ((requiredBreakReason & BreakReason.AssemblyBreakpoint) > 0)
             {
                 if (contractScriptHashToAssemblyBreakpoints.ContainsKey(currentScriptHash)
@@ -202,9 +212,10 @@ namespace Neo.Plugins
             if ((requiredBreakReason & BreakReason.SourceCodeBreakpoint) > 0)
             {
                 if (contractScriptHashToSourceCodeBreakpoints.ContainsKey(currentScriptHash)
-                 && contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
+                 && contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
                  && contractScriptHashToSourceCodeBreakpoints[currentScriptHash]
-                    .Contains(contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer]))
+                    .Contains(contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer])
+                 && prevSource != contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer])
                 {
                     engine.State = VMState.BREAK;
                     actualBreakReason |= BreakReason.SourceCodeBreakpoint;
@@ -213,10 +224,11 @@ namespace Neo.Plugins
             }
             if ((requiredBreakReason & BreakReason.SourceCode) > 0)
             {
-                if (contractScriptHashToSourceLineNums.ContainsKey(currentScriptHash)
-                 && contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
-                 && contractScriptHashToSourceLineNums[currentScriptHash]
-                    .Contains(contractScriptHashToInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer]))
+                if (contractScriptHashToAllSourceLineNums.ContainsKey(currentScriptHash)
+                 && contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash].ContainsKey(currentInstructionPointer)
+                 && contractScriptHashToAllSourceLineNums[currentScriptHash]
+                    .Contains(contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer])
+                 && prevSource != contractScriptHashToAllInstructionPointerToSourceLineNum[currentScriptHash][currentInstructionPointer])
                 {
                     engine.State = VMState.BREAK;
                     actualBreakReason |= BreakReason.SourceCode;

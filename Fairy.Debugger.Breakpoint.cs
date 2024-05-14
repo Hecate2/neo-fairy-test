@@ -13,7 +13,7 @@ namespace Neo.Plugins
         protected virtual JToken SetAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToOpCode.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
@@ -41,18 +41,14 @@ namespace Neo.Plugins
         protected virtual JToken ListAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToOpCode.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
             }
             List<uint> assemblyBreakpoints = contractScriptHashToAssemblyBreakpoints[scriptHash].ToList();
             assemblyBreakpoints.Sort();
-            JArray breakpointList = new();
-            foreach (uint breakpointInstructionPointer in assemblyBreakpoints)
-            {
-                breakpointList.Add(breakpointInstructionPointer);
-            }
+            JArray breakpointList = [.. assemblyBreakpoints];
             return breakpointList;
         }
 
@@ -60,7 +56,7 @@ namespace Neo.Plugins
         protected virtual JToken DeleteAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToInstructionPointerToOpCode.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
@@ -95,7 +91,7 @@ namespace Neo.Plugins
         protected virtual JToken SetSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToAllSourceLineNums.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
@@ -116,7 +112,7 @@ namespace Neo.Plugins
                 i++;
                 JObject json = new();
                 SourceFilenameAndLineNum breakpoint = new SourceFilenameAndLineNum { sourceFilename = sourceCodeFilename, lineNum = sourceCodeBreakpointLineNum };
-                if (contractScriptHashToSourceLineNums[scriptHash].Contains(breakpoint))
+                if (contractScriptHashToAllSourceLineNums[scriptHash].Contains(breakpoint))
                 {
                     sourceCodeBreakpoints.Add(breakpoint);
                     json["filename"] = sourceCodeFilename;
@@ -135,7 +131,7 @@ namespace Neo.Plugins
         protected virtual JToken ListSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToAllSourceLineNums.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
@@ -156,7 +152,7 @@ namespace Neo.Plugins
         protected virtual JToken DeleteSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToSourceLineNum.ContainsKey(scriptHash))
+            if (!contractScriptHashToAllSourceLineNums.ContainsKey(scriptHash))
             {
                 string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
                 throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
