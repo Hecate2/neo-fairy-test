@@ -1,6 +1,7 @@
 using Neo.Cryptography;
 using Neo.IO;
 using Neo.Json;
+using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -169,16 +170,42 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JObject ForceVerifyWithECDsa(JArray _params)
+        {
+            byte[] message = Convert.FromBase64String(_params[0]!.AsString());
+            byte[] pubkey = Convert.FromBase64String(_params[1]!.AsString());
+            byte[] signature = Convert.FromBase64String(_params[2]!.AsString());
+            NamedCurveHash namedCurveHash = _params.Count > 3 ? _params[3]!.AsEnum<NamedCurveHash>() : NamedCurveHash.secp256r1SHA256;
+            JObject json = new();
+            json["result"] = CryptoLib.VerifyWithECDsa(message, pubkey, signature, namedCurveHash);
+            return json;
+        }
+
+        [RpcMethod]
         protected virtual JObject ForceSignMessage(JArray _params)
         {
             string session = _params[0]!.AsString();
             FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
             byte[] message = Convert.FromBase64String(_params[1]!.AsString());
-
+            NamedCurveHash namedCurveHash = _params.Count > 2 ? _params[2]!.AsEnum<NamedCurveHash>() : NamedCurveHash.secp256r1SHA256;
+            (Cryptography.ECC.ECCurve curve, Hasher hasher) = namedCurveHash switch
+            {
+                NamedCurveHash.secp256k1SHA256 =>
+                    (Cryptography.ECC.ECCurve.Secp256k1, Hasher.SHA256),
+                NamedCurveHash.secp256r1SHA256 =>
+                    (Cryptography.ECC.ECCurve.Secp256r1, Hasher.SHA256),
+                NamedCurveHash.secp256k1Keccak256 =>
+                    (Cryptography.ECC.ECCurve.Secp256k1, Hasher.Keccak256),
+                NamedCurveHash.secp256r1Keccak256 =>
+                    (Cryptography.ECC.ECCurve.Secp256r1, Hasher.Keccak256),
+                _ => throw new NotImplementedException($"Invalid namedCurveHash {namedCurveHash}"),
+            };
             JObject json = new();
             KeyPair keyPair = signatureWallet.GetAccounts().First().GetKey();
-            json["signed"] = Convert.ToBase64String(Crypto.Sign(message, keyPair.PrivateKey, Cryptography.ECC.ECCurve.Secp256r1, Hasher.SHA256));
+            json["signed"] = Convert.ToBase64String(
+                Crypto.Sign(message, keyPair.PrivateKey, curve, hasher)
+            );
             return json;
         }
 
@@ -221,6 +248,7 @@ namespace Neo.Plugins
             result["gasconsumed"] = systemFee;
             result["tx"] = Convert.ToBase64String(tx.ToArray());
             result["txHash"] = tx.Hash.ToString();
+            result["txSignData"] = Convert.ToBase64String(tx.GetSignData(system.Settings.Network));
             result["networkfee"] = tx.NetworkFee;
             result["nonce"] = nonce;
             result["witness"] = tx.Witnesses.Select(w => w.ToJson()).ToArray();
