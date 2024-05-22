@@ -64,15 +64,21 @@ Instructions for running neo-cli and RpcServer from full source codes for debugg
 
 #### Building
 
+Neo <= 3.7.4:
+
 Consider cloning [neo-modules](https://github.com/neo-project/neo-modules) and building such a directory: `neo-modules/src/Fairy` and place everything in my repo into your `neo-modules/src/Fairy`. Build `Fairy.csproj`.
 
 Alternatively you can use `Fairy.sln` to build your own solution.
 
 You probably have to change the directories of dependencies in `Fairy.csproj`
 
+Neo > 3.7.4:
+
+neo-modules have been archived and migrated into neo repository. Just build from `neo/src/Plugins`.
+
 #### Usage
 
-1. Place Fairy as a plugin of neo-cli (`neo-cli/bin/Debug/net7.0/Plugins/Fairy/{Fairy.dll + config.json + Fairy.json}`). You may also need to place an [RpcServer.dll](https://github.com/neo-project/neo-modules/releases) at `neo-cli/bin/Debug/net7.0`. **Happy testing on the mainnet**!  Since you can run all the fairy transactions virtually, **it is recommended to use the mainnet** in order to have access to the real environment for production. 
+1. Place Fairy as a plugin of neo-cli (`neo-cli/bin/Debug/net8.0/Plugins/Fairy/{Fairy.dll + config.json + Fairy.json}`). You may also need to place an [RpcServer.dll](https://github.com/neo-project/neo-modules/releases) at `neo-cli/bin/Debug/net8.0`. **Happy testing on the mainnet**!  Since you can run all the fairy transactions virtually, **it is recommended to use the mainnet** in order to have access to the real environment for production. 
 2. Please read the source codes for help about APIs. I have not written any docs.
 3. Non official client: https://github.com/Hecate2/neo-test-client . Watch the fully automatic and repeatable test cases in the repository if you do not know how to use Fairy. 
 4. Create new empty wallets for testing. Fairy is derived from RpcServer which can really relay transactions that affects your wallet. To prevent mis-operation, it is not recommended to use wallets with any value of asset. You can virtually set your asset balance with Fairy. 
