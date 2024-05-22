@@ -39,12 +39,14 @@ namespace Neo.Plugins
         {
             methodNameToSubscriptions["block_added"] = new();
             methodNameToSubscriptions["transaction_added"] = new();
+            methodNameToSubscriptions["transaction_removed"] = new();
             methodNameToSubscriptions["notification_from_execution"] = new();
             methodNameToSubscriptions["transaction_executed"] = new();
             methodNameToSubscriptions["notary_request_event"] = new();
 
             Blockchain.Committing += OnBlockAdded;
             system.MemPool.TransactionAdded += OnTransactionAdded;
+            system.MemPool.TransactionRemoved += OnTransactionRemoved;
             Blockchain.Committing += OnNotification;
             Blockchain.Committing += OnTransactionExecuted;
         }
@@ -109,6 +111,29 @@ namespace Neo.Plugins
                 returnedJson["jsonrpc"] = "2.0";
                 returnedJson["method"] = "block_added";
                 JArray @params = new() { block.ToJson(system.Settings) };
+                returnedJson["params"] = @params;
+                webSocketTasks.Append(Task.Run(async () =>
+                {
+                    if (await WebSocketSendAsync(subscription, returnedJson))
+                        subscriptionsToClose.Add(subscription);
+                }));
+            }
+            await Task.WhenAll(webSocketTasks);
+            CloseSubscriptions(subscriptionsToClose);
+        }
+
+        protected async void OnTransactionRemoved(object? sender, TransactionRemovedEventArgs removedEventArgs)
+        {
+            HashSet<WebSocketSubscriptionNeoGoCompatible> subscriptionsToClose = new();
+            ConcurrentQueue<Task> webSocketTasks = new();
+            foreach (WebSocketSubscriptionNeoGoCompatible subscription in methodNameToSubscriptions["transaction_removed"])
+            {
+                JObject returnedJson = new();
+                returnedJson["jsonrpc"] = "2.0";
+                returnedJson["method"] = "transaction_removed";
+                JArray @params = new() { Enum.GetName(typeof(TransactionRemovalReason), removedEventArgs.Reason) };
+                foreach (Transaction tx in removedEventArgs.Transactions)
+                    @params.Add(tx.ToJson(system.Settings));
                 returnedJson["params"] = @params;
                 webSocketTasks.Append(Task.Run(async () =>
                 {
