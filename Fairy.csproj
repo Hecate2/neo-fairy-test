@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Fairy\config.json">
+    <None Update="Fairy\RpcServer.json">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 	</None>
