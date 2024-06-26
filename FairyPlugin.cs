@@ -62,7 +62,7 @@ namespace Neo.Plugins
             foreach (Fairy fairy in fairyServers)
             {
                 Console.WriteLine($">>> Fairy@{fairy.settings.BindAddress}:{fairy.settings.Port}");
-                ConsoleHelper.Info("Test snapshots:");
+                ConsoleHelper.Info("★ Test snapshots:");
                 if (fairy.sessionStringToFairySession.Keys.Count > 0)
                 {
                     Console.WriteLine("session name:\t\t\t");
@@ -77,7 +77,7 @@ namespace Neo.Plugins
                 }
                 Console.WriteLine("------");
 
-                ConsoleHelper.Info("DebugInfo registration:");
+                ConsoleHelper.Info("★ DebugInfo registration:");
                 if (fairy.contractScriptHashToSourceLineFilenames.Keys.Count > 0)
                 {
                     Console.Error.WriteLine($"test snapshot\t\t\tcontract name\t\t\tscript hash");

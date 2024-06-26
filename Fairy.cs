@@ -14,7 +14,7 @@ namespace Neo.Plugins
             RegisterWebSocketNeoGoCompatible();
             RegisterBlockchainEvents();
             RegisterWebsocketMethods(this);
-            ConsoleHelper.Info($"Fairy server running at {settings.BindAddress}:{settings.Port}.\nBy default, Fairy plugin should not be exposed to the public.");
+            ConsoleHelper.Info($"★ Fairy server running at {settings.BindAddress}:{settings.Port}.\nBy default, Fairy plugin should not be exposed to the public.");
             InitializeTimer();
             if (settings.SessionEnabled && settings.SessionExpirationTime.TotalMilliseconds > 0)
                 ConsoleHelper.Info($"Unused sessions in {settings.SessionExpirationTime.Days}d {settings.SessionExpirationTime.Hours}h:{settings.SessionExpirationTime.Minutes}m:{settings.SessionExpirationTime.Seconds}.{settings.SessionExpirationTime.Milliseconds}s will be cleared by Fairy.");
