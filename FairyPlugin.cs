@@ -77,7 +77,7 @@ namespace Neo.Plugins
                 }
                 Console.WriteLine("------");
 
-                ConsoleHelper.Info("★ DebugInfo registration:");
+                ConsoleHelper.Info("☆ DebugInfo registration:");
                 if (fairy.contractScriptHashToSourceLineFilenames.Keys.Count > 0)
                 {
                     Console.Error.WriteLine($"test snapshot\t\t\tcontract name\t\t\tscript hash");
