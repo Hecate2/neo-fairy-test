@@ -278,8 +278,19 @@ namespace Neo.Plugins
             breakReason = BreakReason.None;
             if (engine.State == VMState.BREAK)
                 engine.State = VMState.NONE;
+            int invocationStackCount = engine.InvocationStack.Count;
             while (engine.State == VMState.NONE)
+            {
                 engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.Return);
+                if (engine.State == VMState.BREAK)
+                {
+                    if ((breakReason & BreakReason.AssemblyBreakpoint) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
+                        break;
+                    if ((breakReason & BreakReason.Return) > 0 && engine.InvocationStack.Count < invocationStackCount)
+                        break;
+                    engine.State = VMState.NONE;
+                }
+            }
             return engine;
         }
 
