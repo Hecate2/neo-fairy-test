@@ -302,7 +302,7 @@ namespace Neo.Plugins
         {
             UInt256 hash = UInt256.Parse(_params[0]!.AsString());
             bool verbose = _params.Count >= 2 && _params[1]!.AsBoolean();
-            uint waitBlockCount = _params.Count >= 2 ? uint.Parse(_params[2]!.AsString()) : 2;
+            uint waitBlockCount = _params.Count >= 3 ? uint.Parse(_params[2]!.AsString()) : 2;
             JToken? json = GetConfirmedTransaction(hash, verbose);
             if (json != null)
                 return json;
