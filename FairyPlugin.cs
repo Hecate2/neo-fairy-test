@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
 using Neo.SmartContract.Native;
-using System.Runtime.Serialization.Formatters;
 
 namespace Neo.Plugins
 {

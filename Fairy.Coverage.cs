@@ -1,4 +1,3 @@
-using Neo;
 using Neo.Json;
 
 namespace Neo.Plugins

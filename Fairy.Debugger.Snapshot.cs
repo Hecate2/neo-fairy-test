@@ -1,5 +1,4 @@
 using Neo.Json;
-using System.Collections.Concurrent;
 
 namespace Neo.Plugins
 {
