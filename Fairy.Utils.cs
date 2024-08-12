@@ -96,7 +96,16 @@ namespace Neo.Plugins
             ContractState contractState = NativeContract.ContractManagement.GetContract(
                 session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot,
                 hash);
-            return contractState.ToJson();
+            JObject result = contractState.ToJson();
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(ms))
+            {
+                contractState.Nef.Serialize(writer);
+                byte[] nef = ms.ToArray();
+                // base64 encoded bytes that can be directly saved as .nef file
+                result["nefFile"] = Convert.ToBase64String(nef)!;
+            }
+            return result;
         }
 
         [RpcMethod]
