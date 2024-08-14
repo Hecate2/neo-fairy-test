@@ -313,16 +313,32 @@ namespace Neo.Plugins
             if (engine.State == VMState.BREAK)
                 engine.State = VMState.NONE;
             UInt160 prevScriptHash = engine.CurrentScriptHash;
-            int invocationStackCount = engine.InvocationStack.Count;
+            uint prevInstructionPointer = (uint)engine.CurrentContext!.InstructionPointer;
+            SourceFilenameAndLineNum prevSourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[prevScriptHash][prevInstructionPointer];
+            int prevInvocationStackCount = engine.InvocationStack.Count;
             while (engine.State == VMState.NONE)
             {
                 engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.SourceCode);
                 if (engine.State == VMState.BREAK)
                 {
-                    if ((breakReason & BreakReason.AssemblyBreakpoint) > 0 || (breakReason & BreakReason.SourceCodeBreakpoint) > 0)
+                    if ((breakReason & BreakReason.AssemblyBreakpoint) > 0)
                         break;
-                    if ((breakReason & BreakReason.SourceCode) > 0 && (engine.InvocationStack.Count == invocationStackCount && engine.CurrentScriptHash == prevScriptHash || engine.InvocationStack.Count < invocationStackCount))
-                        break;
+                    if ((breakReason & BreakReason.SourceCodeBreakpoint) > 0
+                        || (breakReason & BreakReason.SourceCode) > 0)
+                    {
+                        uint currentInstructionPointer = (uint)engine.CurrentContext!.InstructionPointer;
+                        if (currentInstructionPointer <= prevInstructionPointer)
+                            break;
+                        if (engine.InvocationStack.Count != prevInvocationStackCount)
+                            break;
+                        SourceFilenameAndLineNum currentSourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[engine.CurrentScriptHash][currentInstructionPointer];
+                        if (currentSourceCode.sourceFilename == prevSourceCode.sourceFilename
+                            && currentSourceCode.lineNum != prevSourceCode.lineNum)
+                            break;
+                        // Do not break when invocation stack count is same as prev,
+                        // and current source code is the same as prev,
+                        // and instruction pointer is greater than prev
+                    }
                     engine.State = VMState.NONE;
                 }
             }
