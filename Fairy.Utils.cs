@@ -112,11 +112,12 @@ namespace Neo.Plugins
         protected virtual JToken ListContracts(JArray _params)
         {
             string? session = _params[0]?.AsString();
+            bool verbose = _params.Count >= 2 ? _params[1]!.AsBoolean() : false;
             IEnumerable<ContractState> contractStates = NativeContract.ContractManagement.ListContracts(
                 session == null ? system.StoreView : sessionStringToFairySession[session].engine.Snapshot);
             JArray json = new();
             foreach (ContractState c in contractStates)
-                json.Add(c.ToJson());
+                json.Add(verbose ? c.ToJson() : new JObject { ["id"] = c.Id, ["hash"] = c.Hash.ToString() });
             return json;
         }
 
