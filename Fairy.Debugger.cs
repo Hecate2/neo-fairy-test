@@ -202,6 +202,9 @@ namespace Neo.Plugins
                 if (engine.InvocationStack.Count != startInvocationStackCount)
                     return true;
                 SourceFilenameAndLineNum currentSourceCode = GetCurrentSourceCode(engine);
+                if (startSourceCode == defaultSource && currentSourceCode != defaultSource)
+                    return true;
+                // TODO: startSourceCode is code from framework, currentSourceCode is not, return true
                 if (currentSourceCode.sourceFilename == startSourceCode.sourceFilename
                     && currentSourceCode.lineNum != startSourceCode.lineNum)
                     return true;
@@ -212,6 +215,13 @@ namespace Neo.Plugins
             return false;
         }
 
+        private void SetAssemblyCoverage(UInt160 scriptHash, uint instructionPointer)
+        {
+            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(scriptHash)
+                && contractScriptHashToInstructionPointerToCoverage[scriptHash].ContainsKey(instructionPointer))
+                contractScriptHashToInstructionPointerToCoverage[scriptHash][instructionPointer] = true;
+        }
+
         private FairyEngine ExecuteAndCheck(FairyEngine engine, out BreakReason actualBreakReason,
             BreakReason requiredBreakReason = BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint)
         {
@@ -220,13 +230,16 @@ namespace Neo.Plugins
                 return engine;
             Instruction prevInstruction = engine.CurrentContext!.CurrentInstruction ?? Instruction.RET;
             OpCode prevOpCode = prevInstruction.OpCode;
+            uint prevInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
+            UInt160 prevScriptHash = engine.CurrentScriptHash;
             if ((requiredBreakReason & BreakReason.Call) > 0 &&
-               (prevOpCode == OpCode.CALL || prevOpCode == OpCode.CALLA || prevOpCode == OpCode.CALLT || prevOpCode == OpCode.CALL_L))
-            //|| (prevOpCode == OpCode.SYSCALL && prevInstruction.TokenU32 == ApplicationEngine.System_Contract_Call.Hash)))
+               (prevOpCode == OpCode.CALL || prevOpCode == OpCode.CALLA || prevOpCode == OpCode.CALLT || prevOpCode == OpCode.CALL_L)
+               || (prevOpCode == OpCode.SYSCALL && prevInstruction.TokenU32 == ApplicationEngine.System_Contract_Call.Hash))
             {
                 engine.ExecuteNext();
-                if ((engine.CurrentContext!.CurrentInstruction ?? Instruction.RET).OpCode == OpCode.INITSLOT)
-                    engine.ExecuteNext();  // Stopping at INITSLOT makes no good
+                if (engine.State != VMState.NONE)
+                    return engine;
+                SetAssemblyCoverage(prevScriptHash, prevInstructionPointer);
                 engine.State = VMState.BREAK;
                 actualBreakReason |= BreakReason.Call;
                 return engine;
@@ -234,23 +247,21 @@ namespace Neo.Plugins
             if ((requiredBreakReason & BreakReason.Return) > 0 && prevOpCode == OpCode.RET)
             {
                 engine.ExecuteNext();
+                if (engine.State != VMState.NONE)
+                    return engine;
+                SetAssemblyCoverage(prevScriptHash, prevInstructionPointer);
                 engine.State = VMState.BREAK;
                 actualBreakReason |= BreakReason.Return;
                 return engine;
             }
-            uint prevInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
-            UInt160 prevScriptHash = engine.CurrentScriptHash;
             SourceFilenameAndLineNum prevSource = GetCurrentSourceCode(engine);
 
             engine.ExecuteNext();
+            if (engine.State != VMState.NONE)
+                return engine;
 
             // Set coverage for the previous instruction
-            if (contractScriptHashToInstructionPointerToCoverage.ContainsKey(prevScriptHash)
-                && contractScriptHashToInstructionPointerToCoverage[prevScriptHash]
-                .ContainsKey(prevInstructionPointer))
-                contractScriptHashToInstructionPointerToCoverage[prevScriptHash][prevInstructionPointer] = true;
-            if (engine.State == VMState.HALT || engine.State == VMState.FAULT)
-                return engine;
+            SetAssemblyCoverage(prevScriptHash, prevInstructionPointer);
             // Handle the current instruction
             UInt160 currentScriptHash = engine.CurrentScriptHash;
             uint currentInstructionPointer = (uint)engine.CurrentContext.InstructionPointer;
@@ -321,13 +332,29 @@ namespace Neo.Plugins
                 if (engine.State == VMState.BREAK)
                 {
                     if ((breakReason & BreakReason.AssemblyBreakpoint) > 0)
-                        break;
-                    if ((breakReason & BreakReason.Call) > 0)
-                        break;
+                        return engine;
                     if (ShouldBreakAtDifferentSourceCode(engine, breakReason, startInstructionPointer, startSourceCode, startInvocationStackCount))
+                        return engine;
+                    if ((breakReason & BreakReason.Call) > 0)
                         break;
                     engine.State = VMState.NONE;
                 }
+            }
+            if (engine.State == VMState.FAULT || engine.State == VMState.HALT)
+                return engine;
+            // breaked by BreakReason.Call.
+            engine.State = VMState.NONE;
+            while ((engine.CurrentContext!.CurrentInstruction ?? Instruction.RET).OpCode != OpCode.INITSLOT
+                && engine.State == VMState.NONE)
+                engine = ExecuteAndCheck(engine, out breakReason, requiredBreakReason: BreakReason.AssemblyBreakpoint | BreakReason.SourceCodeBreakpoint | BreakReason.Call);
+            // execute INITSLOT
+            if ((engine.CurrentContext!.CurrentInstruction ?? Instruction.RET).OpCode == OpCode.INITSLOT
+                && engine.State != VMState.FAULT)
+                engine.ExecuteNext();
+            if (engine.State != VMState.FAULT)
+            {
+                engine.State = VMState.BREAK;
+                breakReason |= BreakReason.Call;
             }
             return engine;
         }
@@ -398,7 +425,11 @@ namespace Neo.Plugins
                 {
                     if ((breakReason & BreakReason.AssemblyBreakpoint) > 0)
                         break;
-                    if (ShouldBreakAtDifferentSourceCode(engine, breakReason, startInstructionPointer, startSourceCode, startInvocationStackCount))
+                    if ((breakReason & BreakReason.SourceCodeBreakpoint) > 0
+                        && ShouldBreakAtDifferentSourceCode(engine, breakReason, startInstructionPointer, startSourceCode, startInvocationStackCount))
+                        break;
+                    if ((breakReason & BreakReason.SourceCode) > 0 && engine.InvocationStack.Count <= startInvocationStackCount
+                        && ShouldBreakAtDifferentSourceCode(engine, breakReason, startInstructionPointer, startSourceCode, startInvocationStackCount))
                         break;
                     engine.State = VMState.NONE;
                 }
