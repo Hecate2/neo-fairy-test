@@ -24,13 +24,25 @@ namespace Neo.Plugins
             string session = _params[0]!.AsString();
             NefFile nef = Convert.FromBase64String(_params[1]!.AsString()).AsSerializable<NefFile>();
             ContractManifest manifest = ContractManifest.Parse(_params[2]!.AsString());
-            Signer[] signers = SignersFromJson((JArray)_params[3]!, system.Settings);
+            ContractParameter? data = null;
+            Signer[] signers;
+            var param3 = _params[3]! as JObject;
+            if (param3 != null)  // A contract parameter
+            {
+                data = ContractParameter.FromJson(param3);
+                signers = SignersFromJson((JArray)_params[4]!, system.Settings);
+            }
+            else
+                signers = SignersFromJson((JArray)_params[3]!, system.Settings);
             FairySession testSession = GetOrCreateFairySession(session);
             DataCache snapshot = testSession.engine.Snapshot;
             byte[] script;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                if (data != null)
+                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString(), data);
+                else
+                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
                 script = sb.ToArray();
             }
             JObject json = new();
