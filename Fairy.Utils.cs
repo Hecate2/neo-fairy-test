@@ -441,7 +441,7 @@ namespace Neo.Plugins
             if (baseException != null)
             {
                 returned = baseException.StackTrace + "\n" + baseException.Message;
-                if (returned.Contains("Cannot Call Method Neo.SmartContract.Manifest.ContractMethodDescriptor"))
+                if (returned.Contains("Cannot Call Method "))
                     returned += "\n!!!Check whether you have written [ContractPermission(\"*\", \"*\")] in your contract!!!";
                 return returned;
             }
