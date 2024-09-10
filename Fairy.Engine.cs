@@ -155,7 +155,15 @@ namespace Neo.Plugins
 
             public new BigInteger GetRandom() => base.GetRandom();
             public BigInteger GetFairyRandom() => runtimeArgs.designatedRandom != null ? (BigInteger)runtimeArgs.designatedRandom : base.GetRandom();
-            public new ulong GetTime() => base.GetTime();
+            public new ulong GetTime()
+            {
+                ulong result = base.GetTime();
+                if (result != 0)
+                    return result;
+                uint currentIndex = NativeContract.Ledger.CurrentIndex(Snapshot);
+                Block currentBlock = NativeContract.Ledger.GetBlock(Snapshot, currentIndex);
+                return currentBlock.Timestamp + (ulong)ProtocolSettings.TimePerBlock.TotalMilliseconds;
+            }
             public ulong GetFairyTime() => runtimeArgs.timestamp != null ? (ulong)runtimeArgs.timestamp : GetTime();
             //public ulong GetFairyBlockIndex() => serviceArgs.blockIndex != null ? (uint)serviceArgs.blockIndex : NativeContract.Ledger.CurrentIndex(this.Snapshot);
         }
