@@ -56,6 +56,32 @@ namespace Neo.Plugins
         }
 
         [RpcMethod]
+        protected virtual JToken DebugScriptWithSession(JArray _params)
+        {
+            string session = _params[0]!.AsString();
+            bool writeSnapshot = _params[1]!.AsBoolean();
+            byte[] script = Convert.FromBase64String(_params[2]!.AsString());
+            Signer[]? signers = _params.Count >= 4 ? SignersFromJson((JArray)_params[3]!, system.Settings) : null;
+            Witness[]? witnesses = _params.Count >= 5 ? WitnessesFromJson((JArray)_params[4]!) : null;
+            Transaction? tx = signers == null ? null : new Transaction
+            {
+                Signers = signers,
+                Attributes = System.Array.Empty<TransactionAttribute>(),
+                Witnesses = witnesses,
+            };
+            FairySession testSession = GetOrCreateFairySession(session);
+            FairyEngine newEngine;
+            logs.Clear();
+            FairyEngine.Log += CacheLog!;
+            BreakReason breakReason = BreakReason.None;
+            newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
+            FairyEngine.Log -= CacheLog!;
+            if (writeSnapshot)
+                sessionStringToFairySession[session].debugEngine = newEngine;
+            return DumpDebugResultJson(newEngine, breakReason);
+        }
+
+        [RpcMethod]
         protected virtual JToken DebugContinue(JArray _params)
         {
             string session = _params[0]!.AsString();
