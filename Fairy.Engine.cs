@@ -162,7 +162,7 @@ namespace Neo.Plugins
                     return result;
                 uint currentIndex = NativeContract.Ledger.CurrentIndex(Snapshot);
                 Block currentBlock = NativeContract.Ledger.GetBlock(Snapshot, currentIndex);
-                return currentBlock.Timestamp + (ulong)ProtocolSettings.TimePerBlock.TotalMilliseconds;
+                return currentBlock.Timestamp + ProtocolSettings.MillisecondsPerBlock;
             }
             public ulong GetFairyTime() => runtimeArgs.timestamp != null ? (ulong)runtimeArgs.timestamp : GetTime();
             //public ulong GetFairyBlockIndex() => serviceArgs.blockIndex != null ? (uint)serviceArgs.blockIndex : NativeContract.Ledger.CurrentIndex(this.Snapshot);
