@@ -13,11 +13,11 @@ namespace Neo.Plugins
         protected virtual JToken SetAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
-            if (!contractScriptHashToInstructionPointerToOpCode.ContainsKey(scriptHash))
-            {
-                string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
-                throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
-            }
+            //if (!contractScriptHashToInstructionPointerToOpCode.ContainsKey(scriptHash))
+            //{
+            //    string? contractName = NativeContract.ContractManagement.GetContract(system.StoreView, scriptHash)?.Manifest.Name;
+            //    throw new ArgumentException($"Scripthash {scriptHash} {contractName} not registered for debugging. Call SetDebugInfo(scriptHash, nefDbgNfo, dumpNef) first");
+            //}
             HashSet<uint>? assemblyBreakpoints;
             if (!contractScriptHashToAssemblyBreakpoints.TryGetValue(scriptHash, out assemblyBreakpoints))
             {
@@ -29,10 +29,14 @@ namespace Neo.Plugins
             {
                 string breakpointInstructionPointerStr = _params[i]!.AsString();
                 uint breakpointInstructionPointer = uint.Parse(breakpointInstructionPointerStr);
-                if (contractScriptHashToInstructionPointerToOpCode[scriptHash].ContainsKey(breakpointInstructionPointer))
-                    json[breakpointInstructionPointerStr] = assemblyBreakpoints.Add(breakpointInstructionPointer);
-                else
-                    throw new ArgumentException($"No instruction at InstructionPointer={breakpointInstructionPointer}");
+                json[breakpointInstructionPointerStr] = assemblyBreakpoints.Add(breakpointInstructionPointer);
+                if (contractScriptHashToInstructionPointerToOpCode.TryGetValue(scriptHash, out Dictionary<uint, VM.OpCode>? instructionPointerToOpCode))
+                {// A contract that has registered debuginfo
+                    if (!instructionPointerToOpCode.ContainsKey(breakpointInstructionPointer))
+                        throw new ArgumentException($"No instruction at InstructionPointer={breakpointInstructionPointer}");
+                    // TODO: we can check whether the addr is valid, without the debuginfo and instructionPointerToOpCode
+                }
+                // else this is a contract without debug info registration. Do nothing.
             }
             return json;
         }
