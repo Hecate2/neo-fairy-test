@@ -8,6 +8,7 @@ using Neo.VM;
 using Neo.Wallets;
 using System.Collections.Concurrent;
 using System.Numerics;
+using System.Text;
 
 namespace Neo.Plugins
 {
@@ -144,11 +145,11 @@ namespace Neo.Plugins
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
             {
-                string traceback = "";
-                try { if (newEngine.CallingScriptHash != null) traceback += $"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"; } catch { }
-                try { traceback += $"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"; } catch { }
-                try { traceback += $"EntryScriptHash={newEngine.EntryScriptHash}\r\n"; } catch { }
-                traceback += newEngine.FaultException.StackTrace;
+                StringBuilder traceback = new();
+                try { if (newEngine.CallingScriptHash != null) traceback.Append($"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"); } catch { }
+                try { traceback.Append($"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"); } catch { }
+                try { traceback.Append($"EntryScriptHash={newEngine.EntryScriptHash}\r\n"); } catch { }
+                traceback.Append(newEngine.FaultException.StackTrace);
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack.Reverse())
                 {
                     UInt160 contextScriptHash = context.GetScriptHash();
@@ -160,33 +161,32 @@ namespace Neo.Plugins
                             string sourceCodeTraceback = "";
                             SourceFilenameAndLineNum sourceCode = contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash][(uint)context.InstructionPointer];
                             sourceCodeTraceback += $"\r\nFile {sourceCode.sourceFilename}, line {sourceCode.lineNum}: {sourceCode.sourceContent}";
-                            traceback += sourceCodeTraceback;
+                            traceback.Append(sourceCodeTraceback);
                         }
                     }
                     //catch (Exception _) {; }
-                    traceback += $"\r\n\tInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]";
+                    traceback.Append($"\r\n\tInstructionPointer={context.InstructionPointer}, OpCode {context.CurrentInstruction?.OpCode}, Script Length={context.Script.Length} {contextScriptHash}[{contextContractName}]");
                 }
-                traceback += $"\r\n{json["exception"]!.GetString()}";
+                traceback.Append($"\r\n{json["exception"]!.GetString()}");
 
                 if (!logs.IsEmpty)
-                {
-                    traceback += $"\r\n-------Logs-------({logs.Count})";
-                }
+                    traceback.Append($"\r\n-------Logs-------({logs.Count})");
+
                 foreach (LogEventArgs log in logs)
                 {
                     string? contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash)?.Manifest.Name;
-                    traceback += $"\r\n[{log.ScriptHash}] {contractName}: {log.Message}";
+                    traceback.Append($"\r\n[{log.ScriptHash}] {contractName}: {log.Message}");
                 }
-                json["traceback"] = traceback;
+                json["traceback"] = traceback.ToString();
             }
-            try
-            {
-                json["stack"] = new JArray(newEngine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
-            }
-            catch (InvalidOperationException)
-            {
-                json["stack"] = "error: invalid operation";
-            }
+            //try
+            //{
+            json["stack"] = new JArray(newEngine.ResultStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
+            //}
+            //catch (InvalidOperationException)
+            //{
+            //    json["stack"] = "error: invalid operation";
+            //}
             if (newEngine.State != VMState.FAULT)
             {
                 if (witnesses == null)
