@@ -110,6 +110,7 @@ namespace Neo.Plugins
                 public Wallet fairyWallet;
                 public ulong? timestamp = null;
                 public BigInteger? designatedRandom = null;
+                public bool checkWitnessReturnTrue = false;
 
                 public object Clone() => MemberwiseClone();
                 //public uint? blockIndex = null;
@@ -153,6 +154,8 @@ namespace Neo.Plugins
                 return descriptor;
             }
 
+            public new bool CheckWitness(byte[] hashOrPubkey) => base.CheckWitness(hashOrPubkey);
+            public bool CheckFairyWitness(byte[] hashOrPubkey) => runtimeArgs.checkWitnessReturnTrue || CheckWitness(hashOrPubkey);
             public new BigInteger GetRandom() => base.GetRandom();
             public BigInteger GetFairyRandom() => runtimeArgs.designatedRandom != null ? (BigInteger)runtimeArgs.designatedRandom : base.GetRandom();
             public new ulong GetTime()
@@ -230,6 +233,33 @@ namespace Neo.Plugins
             return json;
         }
 
+        [RpcMethod]
+        protected virtual JToken SetSnapshotCheckWitness(JArray _params)
+        {
+            string session = _params[0]!.AsString();
+            bool setValue = _params[1]!.AsBoolean();
+            FairySession fairySession = sessionStringToFairySession[session];
+            fairySession.checkWitnessReturnTrue = setValue;
+            JObject json = new();
+            json[session] = setValue;
+            return json;
+        }
+
+        [RpcMethod]
+        protected virtual JToken GetSnapshotCheckWitness(JArray _params)
+        {
+            JObject json = new();
+            foreach (var s in _params)
+            {
+                string session = s!.AsString();
+                if (sessionStringToFairySession.ContainsKey(session))
+                    json[session] = sessionStringToFairySession[session].checkWitnessReturnTrue;
+                else
+                    json[session] = null;
+            }
+            return json;
+        }
+
         private static Block CreateDummyBlockWithTimestamp(DataCache snapshot, ProtocolSettings settings, ulong? timestamp = null, uint? index = null)
         {
             UInt256 hash = NativeContract.Ledger.CurrentHash(snapshot);
@@ -298,6 +328,24 @@ namespace Neo.Plugins
                     {
                         engine.runtimeArgs.designatedRandom = value;
                         engine.Register("System.Runtime.GetRandom", typeof(FairyEngine).GetMethod(nameof(FairyEngine.GetFairyRandom))!, ApplicationEngine.System_Runtime_GetRandom.Hash, 0, CallFlags.None);
+                    }
+                }
+            }
+
+            public bool checkWitnessReturnTrue
+            {
+                get => engine.runtimeArgs.checkWitnessReturnTrue;
+                set
+                {
+                    if (value == false)
+                    {
+                        engine.Register("System.Runtime.CheckWitness", typeof(FairyEngine).GetMethod(nameof(FairyEngine.CheckWitness))!, ApplicationEngine.System_Runtime_CheckWitness.Hash, 1 << 10, CallFlags.None);
+                        engine.runtimeArgs.checkWitnessReturnTrue = value;
+                    }
+                    else
+                    {
+                        engine.runtimeArgs.checkWitnessReturnTrue = value;
+                        engine.Register("System.Runtime.CheckWitness", typeof(FairyEngine).GetMethod(nameof(FairyEngine.CheckFairyWitness))!, ApplicationEngine.System_Runtime_CheckWitness.Hash, 1 << 10, CallFlags.None);
                     }
                 }
             }
