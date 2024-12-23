@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
+using Neo.Ledger;
+using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.SmartContract.Native;
 
 namespace Neo.Plugins
@@ -19,9 +22,17 @@ namespace Neo.Plugins
             }
         }
 
+        public uint SyncUntilBlock { get; internal set; } = uint.MaxValue;
+        public CancellationTokenSource? CancelSyncSleep;
+
         Settings settings;
         NeoSystem system;
         readonly List<Fairy> fairyServers = new();
+
+        public FairyPlugin() : base()
+        {
+            Blockchain.Committing += SyncControl;
+        }
 
         protected override void Configure()
         {
@@ -38,7 +49,7 @@ namespace Neo.Plugins
                 if (s.Network == system.Settings.Network)
                 {
                     hasServer = true;
-                    Fairy fairy = new(system, s);
+                    Fairy fairy = new(system, s, this);
                     fairy.StartRpcServer();
                     fairy.StartWebsocketServer();
                     fairyServers.Add(fairy);
@@ -48,15 +59,53 @@ namespace Neo.Plugins
             {
                 ConsoleHelper.Warning("No valid server from config. Using default!");
                 RpcServerSettings s = RpcServerSettings.Default;
-                Fairy fairy = new(system, s);
+                Fairy fairy = new(system, s, this);
                 fairy.StartRpcServer();
                 fairy.StartWebsocketServer();
                 fairyServers.Add(fairy);
             }
+
+            string pauseFileName = "pause.txt";
+            string pauseFileFullPath = System.IO.Path.Combine(RootPath, pauseFileName);
+            if (File.Exists(pauseFileFullPath))
+            {
+                StreamReader sr = new StreamReader(pauseFileFullPath);
+                string? line = sr.ReadLine();
+                if (uint.TryParse(line, out uint blockIndex))
+                    SyncUntilBlock = blockIndex;
+                else
+                    SyncUntilBlock = 0;
+                if (SyncUntilBlock < uint.MaxValue)
+                    ConsoleHelper.Warning($"Block sync at index > {SyncUntilBlock} paused by Fairy plugin, because {pauseFileName} exists in {RootPath}. Execute `sync` in Neo.CLI to continue block synchronization.");
+            }
+        }
+
+        /// <summary>
+        /// Sleep at block committing, if user does not want to synchronoze new blocks
+        /// </summary>
+        protected void SyncControl(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
+        {
+            TimeSpan sleepTimeMs = TimeSpan.FromMilliseconds(3600_000);
+            while (block.Index > SyncUntilBlock)
+            {
+                string error = $"""{DateTime.Now.ToString("yyyy-MM-dd h:mm:ss tt")} Block synchronization at index {block.Index} > {SyncUntilBlock} paused by fairy. Current block height {NativeContract.Ledger.CurrentIndex(system.StoreView)}. Execute `sync` in Neo.CLI to continue sync, or `sync 0` to pause sync. Reminding you again in {sleepTimeMs.Days}d {sleepTimeMs.Hours}h:{sleepTimeMs.Minutes}m:{sleepTimeMs.Seconds}.{sleepTimeMs.Milliseconds}s""";
+                ConsoleHelper.Warning(error);
+                CancelSyncSleep = new();
+                CancelSyncSleep.Token.WaitHandle.WaitOne((int)sleepTimeMs.TotalMilliseconds);
+            }
+        }
+
+        [ConsoleCommand("sync", Category = "Fairy Commands", Description = "Pause or continue block synchronization")]
+        protected void OnFairySyncCommand(uint blockIndex = uint.MaxValue)
+        {
+            SyncUntilBlock = blockIndex;
+            if (CancelSyncSleep != null)
+                CancelSyncSleep.Cancel();
+            ConsoleHelper.Info($"Sync until block {blockIndex}");
         }
 
         [ConsoleCommand("fairy", Category = "Fairy Commands", Description = "List Fairy snapshots")]
-        private void OnFairyCommand()
+        protected void OnFairyCommand()
         {
             foreach (Fairy fairy in fairyServers)
             {
@@ -105,6 +154,8 @@ namespace Neo.Plugins
                     ConsoleHelper.Warning($"No DebugInfo registration!");
                 }
             }
+            if (SyncUntilBlock < uint.MaxValue)
+                ConsoleHelper.Warning($"Fairy sync until block index {SyncUntilBlock}");
         }
     }
 }
