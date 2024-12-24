@@ -99,8 +99,7 @@ namespace Neo.Plugins
         protected void OnFairySyncCommand(uint blockIndex = uint.MaxValue)
         {
             SyncUntilBlock = blockIndex;
-            if (CancelSyncSleep != null)
-                CancelSyncSleep.Cancel();
+            CancelSyncSleep?.Cancel();
             ConsoleHelper.Info($"Sync until block {blockIndex}");
         }
 

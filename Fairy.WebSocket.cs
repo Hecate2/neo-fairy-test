@@ -16,7 +16,7 @@ namespace Neo.Plugins
     public partial class Fairy : RpcServer
     {
         public IWebHost websocketHost;
-        protected readonly Dictionary<string, Func<JArray, object>> rpcMethods = new();
+        protected readonly Dictionary<string, Func<JArray, object>> FairyRpcMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, object>> webSocketNeoGoCompatibleMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, CancellationToken, object>> webSocketMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, LinkedList<object>, object>> webSocketControlMethods = new();
@@ -64,10 +64,10 @@ namespace Neo.Plugins
             }
             foreach (MethodInfo method in handler.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                RpcMethodAttribute attribute = method.GetCustomAttribute<RpcMethodAttribute>()!;
+                FairyRpcMethodAttribute attribute = method.GetCustomAttribute<FairyRpcMethodAttribute>()!;
                 if (attribute is null) continue;
                 string name = string.IsNullOrEmpty(attribute.Name) ? method.Name.ToLowerInvariant() : attribute.Name;
-                rpcMethods[name] = method.CreateDelegate<Func<JArray, object>>(handler);
+                FairyRpcMethods[name] = method.CreateDelegate<Func<JArray, object>>(handler);
             }
 
         }
@@ -217,7 +217,7 @@ namespace Neo.Plugins
                             throw new NotSupportedException();
                     };
                 }
-                else if (rpcMethods.TryGetValue(method, out var rpcFunc))
+                else if (FairyRpcMethods.TryGetValue(method, out var rpcFunc))
                 {
                     object rpcResult = rpcFunc((JArray)@params);
                     if (request["needresponse"]?.AsBoolean() is true)

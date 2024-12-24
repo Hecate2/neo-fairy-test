@@ -9,7 +9,7 @@ namespace Neo.Plugins
         readonly ConcurrentDictionary<UInt160, HashSet<uint>> contractScriptHashToAssemblyBreakpoints = new();
         readonly ConcurrentDictionary<UInt160, HashSet<SourceFilenameAndLineNum>> contractScriptHashToSourceCodeBreakpoints = new();
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
@@ -41,7 +41,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
@@ -56,7 +56,7 @@ namespace Neo.Plugins
             return breakpointList;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DeleteAssemblyBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
@@ -91,7 +91,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
@@ -131,7 +131,7 @@ namespace Neo.Plugins
             return breakpointList;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());
@@ -152,7 +152,7 @@ namespace Neo.Plugins
             return breakpointList;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DeleteSourceCodeBreakpoints(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());

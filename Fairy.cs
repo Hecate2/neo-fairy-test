@@ -5,6 +5,7 @@ namespace Neo.Plugins
 {
     public partial class Fairy : RpcServer
     {
+        public class FairyRpcMethodAttribute : RpcMethodAttribute { }
         public NeoSystem system;
         public RpcServerSettings settings;
         public FairyPlugin? fairyPlugin;
@@ -26,7 +27,7 @@ namespace Neo.Plugins
             ConsoleHelper.Info($"\ndefaultFairyWallet:\n{defaultWallet.account.ScriptHash}\n{defaultWallet.account.Address}\n{defaultWallet.account.key.PublicKey}\n");
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject HelloFairy(JArray _params)
         {
             JObject result = new()

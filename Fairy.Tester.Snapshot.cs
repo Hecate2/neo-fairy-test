@@ -23,7 +23,7 @@ namespace Neo.Plugins
             return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken NewSnapshotsFromCurrentSystem(JArray _params)
         {
             JObject json = new();
@@ -39,7 +39,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DeleteSnapshots(JArray _params)
         {
             JObject json = new();
@@ -51,7 +51,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListSnapshots(JArray _params)
         {
             JArray session = new JArray();
@@ -62,7 +62,7 @@ namespace Neo.Plugins
             return session;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken RenameSnapshot(JArray _params)
         {
             string from = _params[0]!.AsString();
@@ -74,7 +74,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken CopySnapshot(JArray _params)
         {
             string from = _params[0]!.AsString();

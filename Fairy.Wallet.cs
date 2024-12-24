@@ -92,7 +92,7 @@ namespace Neo.Plugins
         protected Wallet defaultFairyWallet;
         protected Witness[] defaultWitness = { new Witness { InvocationScript = (new byte[2] { 0x0c, 0x40 }).Concat(new byte[64]).ToArray(), VerificationScript = (new byte[2] { 0x0c, 0x21 }).Concat(new byte[33]).Concat(new byte[5] { 0x41, 0x56, 0xe7, 0xb3, 0x27 }).ToArray() } };
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken OpenDefaultFairyWallet(JArray _params)
         {
             string path = _params[0]!.AsString();
@@ -112,7 +112,7 @@ namespace Neo.Plugins
             return true;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ResetDefaultFairyWallet(JArray _params)
         {
             FairyWallet defaultWallet = new FairyWallet(system.Settings);
@@ -122,7 +122,7 @@ namespace Neo.Plugins
             return true;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSessionFairyWalletWithNep2(JArray _params)
         {
             string sessionString = _params[0]!.AsString();
@@ -143,7 +143,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSessionFairyWalletWithWif(JArray _params)
         {
             string sessionString = _params[0]!.AsString();
@@ -169,7 +169,7 @@ namespace Neo.Plugins
             return address.ToScriptHash(version);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject ForceVerifyWithECDsa(JArray _params)
         {
             byte[] message = Convert.FromBase64String(_params[0]!.AsString());
@@ -181,7 +181,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject ForceSignMessage(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -209,7 +209,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject ForceSignTransaction(JArray _params)
         {
             string session = _params[0]!.AsString();

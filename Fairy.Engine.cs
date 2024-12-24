@@ -171,7 +171,7 @@ namespace Neo.Plugins
             //public ulong GetFairyBlockIndex() => serviceArgs.blockIndex != null ? (uint)serviceArgs.blockIndex : NativeContract.Ledger.CurrentIndex(this.Snapshot);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSnapshotTimestamp(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -191,7 +191,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetSnapshotTimeStamp(JArray _params)
         {
             JObject json = new();
@@ -203,7 +203,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSnapshotRandom(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -218,7 +218,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetSnapshotRandom(JArray _params)
         {
             JObject json = new();
@@ -233,7 +233,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetSnapshotCheckWitness(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -245,7 +245,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetSnapshotCheckWitness(JArray _params)
         {
             JObject json = new();

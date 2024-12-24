@@ -55,7 +55,7 @@ namespace Neo.Plugins
             throw new ArgumentException("No file found in zip archive");
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken SetDebugInfo(JArray _params)
         {
             string param0 = _params[0]!.AsString();
@@ -120,7 +120,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListDebugInfo(JArray _params)
         {
             JArray scriptHashes = new JArray();
@@ -131,7 +131,7 @@ namespace Neo.Plugins
             return scriptHashes;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListFilenamesOfContract(JArray _params)
         {
             string scriptHashStr = _params[0]!.AsString();
@@ -142,7 +142,7 @@ namespace Neo.Plugins
             return filenames;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DeleteDebugInfo(JArray _params)
         {
             JObject json = new();
@@ -164,7 +164,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken? GetMethodByInstructionPointer(JArray _params)
         {
             UInt160 scriptHash = UInt160.Parse(_params[0]!.AsString());

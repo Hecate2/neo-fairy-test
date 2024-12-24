@@ -4,7 +4,7 @@ namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListDebugSnapshots(JArray _params)
         {
             JArray session = new JArray();
@@ -16,7 +16,7 @@ namespace Neo.Plugins
             return session;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject DeleteDebugSnapshots(JArray _params)
         {
             JObject json = new();

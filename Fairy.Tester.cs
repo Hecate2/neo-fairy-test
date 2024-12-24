@@ -21,7 +21,7 @@ namespace Neo.Plugins
         const byte Native_Prefix_Account = 20;
         const byte Native_Prefix_TotalSupply = 11;
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject InvokeFunctionWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -40,7 +40,7 @@ namespace Neo.Plugins
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject InvokeManyWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -62,7 +62,7 @@ namespace Neo.Plugins
             return GetInvokeResultWithSession(session, writeSnapshot, script, signers, witnesses);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject InvokeScriptWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();

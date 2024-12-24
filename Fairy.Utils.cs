@@ -16,7 +16,7 @@ namespace Neo.Plugins
 {
     public partial class Fairy
     {
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject VirtualDeploy(JArray _params)
         {
             if (defaultFairyWallet == null)
@@ -83,7 +83,7 @@ namespace Neo.Plugins
         /// other cases: get all blocks defined by each param
         /// </param>
         /// <returns></returns>
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetManyBlocks(JArray _params)
         {
             using var snapshot = system.GetSnapshot();
@@ -100,7 +100,7 @@ namespace Neo.Plugins
             return result;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetContract(JArray _params)
         {
             string? session = _params[0]?.AsString();
@@ -120,7 +120,7 @@ namespace Neo.Plugins
             return result;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken ListContracts(JArray _params)
         {
             string? session = _params[0]?.AsString();
@@ -133,7 +133,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject PutStorageWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -154,7 +154,7 @@ namespace Neo.Plugins
             return new JObject();
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject GetStorageWithSession(JArray _params)
         {
             string? session = _params[0]?.AsString();
@@ -182,7 +182,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject FindStorageWithSession(JArray _params)
         {
             string? session = _params[0]?.AsString();
@@ -207,7 +207,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken Deserialize(JArray _params)
         {
             JArray json = new();
@@ -219,7 +219,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject GetTime(JArray _params)
         {
             JObject json = new();
@@ -230,7 +230,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject SetNeoBalance(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -239,7 +239,7 @@ namespace Neo.Plugins
             return SetTokenBalance(session, neoScriptHash, account, balance, Native_Prefix_Account);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject SetGasBalance(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -248,7 +248,7 @@ namespace Neo.Plugins
             return SetTokenBalance(session, gasScriptHash, account, balance, Native_Prefix_Account);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject SetNep17Balance(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -298,7 +298,7 @@ namespace Neo.Plugins
             }
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetManyUnclaimedGas(JArray _params)
         {
             string? session = _params[0]?.AsString();
@@ -319,7 +319,7 @@ namespace Neo.Plugins
         /// <param name="_params">UInt256String; bool(verbose); waitBlockCount</param>
         /// <returns></returns>
         /// <exception cref="RpcException"></exception>
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken AwaitConfirmedTransaction(JArray _params)
         {
             UInt256 hash = UInt256.Parse(_params[0]!.AsString());

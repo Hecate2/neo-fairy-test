@@ -10,7 +10,7 @@ namespace Neo.Plugins
         /// <param name="_params"></param>
         /// <returns>opcode -> coveredOrNot</returns>
         /// <exception cref="ArgumentException"></exception>
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject GetContractOpCodeCoverage(JArray _params)
         {
             UInt160 scripthash = UInt160.Parse(_params[0]!.AsString());
@@ -28,7 +28,7 @@ namespace Neo.Plugins
         /// </summary>
         /// <param name="_params"></param>
         /// <returns>SourceFilenameAndLineNum -> {opcode -> coveredOrNot}</returns>
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject GetContractSourceCodeCoverage(JArray _params)
         {
             JObject opcodeCoverage = GetContractOpCodeCoverage(_params);
@@ -44,7 +44,7 @@ namespace Neo.Plugins
             return result;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JObject ClearContractOpCodeCoverage(JArray _params)
         {
             UInt160 scripthash = UInt160.Parse(_params[0]!.AsString());

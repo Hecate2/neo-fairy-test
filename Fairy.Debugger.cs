@@ -22,7 +22,7 @@ namespace Neo.Plugins
             SourceCode = 1 << 4
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugFunctionWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -56,7 +56,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugScriptWithSession(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -82,7 +82,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugContinue(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -384,7 +384,7 @@ namespace Neo.Plugins
             return engine;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugStepInto(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -422,7 +422,7 @@ namespace Neo.Plugins
             return engine;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugStepOut(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -462,7 +462,7 @@ namespace Neo.Plugins
             return engine;
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugStepOverSourceCode(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -475,7 +475,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, breakReason);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugStepOverAssembly(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -488,13 +488,13 @@ namespace Neo.Plugins
             return DumpDebugResultJson(newEngine, BreakReason.None);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken DebugStepOver(JArray _params)
         {
             return DebugStepOverSourceCode(_params);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetLocalVariables(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -503,7 +503,7 @@ namespace Neo.Plugins
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).LocalVariables!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetArguments(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -512,7 +512,7 @@ namespace Neo.Plugins
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).Arguments!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetStaticFields(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -521,7 +521,7 @@ namespace Neo.Plugins
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).StaticFields!.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetEvaluationStack(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -530,7 +530,7 @@ namespace Neo.Plugins
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).EvaluationStack.Select(p => ToJson(p, settings.MaxIteratorResultItems)));
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetInvocationStack(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -545,7 +545,7 @@ namespace Neo.Plugins
             }));
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetInstructionPointer(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -554,7 +554,7 @@ namespace Neo.Plugins
             return new JArray(newEngine.InvocationStack.ElementAt(invocationStackIndex).InstructionPointer);
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetVariableValueByName(JArray _params)
         {
             string session = _params[0]!.AsString();
@@ -563,7 +563,7 @@ namespace Neo.Plugins
             return GetVariableNamesAndValues(new JArray(session, invocationStackIndex))[variableName] ?? throw new ArgumentException($"Variable `{variableName}` not found.");
         }
 
-        [RpcMethod]
+        [FairyRpcMethod]
         protected virtual JToken GetVariableNamesAndValues(JArray _params)
         {
             string session = _params[0]!.AsString();
