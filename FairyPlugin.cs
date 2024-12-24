@@ -23,6 +23,7 @@ namespace Neo.Plugins
         }
 
         public uint SyncUntilBlock { get; internal set; } = uint.MaxValue;
+        public readonly TimeSpan SleepTimeMs = TimeSpan.FromMilliseconds(3600_000);
         public CancellationTokenSource? CancelSyncSleep;
 
         Settings settings;
@@ -85,13 +86,12 @@ namespace Neo.Plugins
         /// </summary>
         protected void SyncControl(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
         {
-            TimeSpan sleepTimeMs = TimeSpan.FromMilliseconds(3600_000);
             while (block.Index > SyncUntilBlock)
             {
-                string error = $"""{DateTime.Now.ToString("yyyy-MM-dd h:mm:ss tt")} Block synchronization at index {block.Index} > {SyncUntilBlock} paused by fairy. Current block height {NativeContract.Ledger.CurrentIndex(system.StoreView)}. Execute `sync` in Neo.CLI to continue sync, or `sync 0` to pause sync. Reminding you again in {sleepTimeMs.Days}d {sleepTimeMs.Hours}h:{sleepTimeMs.Minutes}m:{sleepTimeMs.Seconds}.{sleepTimeMs.Milliseconds}s""";
+                string error = $"""{DateTime.Now.ToString("yyyy-MM-dd h:mm:ss tt")} Block synchronization at index {block.Index} > {SyncUntilBlock} paused by fairy. Current block height {NativeContract.Ledger.CurrentIndex(system.StoreView)}. Execute `sync` in Neo.CLI to continue sync, or `sync 0` to pause sync. Reminding you again in {SleepTimeMs.Days}d {SleepTimeMs.Hours}h:{SleepTimeMs.Minutes}m:{SleepTimeMs.Seconds}.{SleepTimeMs.Milliseconds}s""";
                 ConsoleHelper.Warning(error);
                 CancelSyncSleep = new();
-                CancelSyncSleep.Token.WaitHandle.WaitOne((int)sleepTimeMs.TotalMilliseconds);
+                CancelSyncSleep.Token.WaitHandle.WaitOne((int)SleepTimeMs.TotalMilliseconds);
             }
         }
 
