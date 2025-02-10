@@ -44,11 +44,17 @@ namespace Neo.Plugins
                 Attributes = System.Array.Empty<TransactionAttribute>(),
                 Witnesses = witnesses,
             };
+            JObject json = DebugFairyTransaction(session, writeSnapshot, script, tx);
+            return json;
+        }
+
+        protected JObject DebugFairyTransaction(string session, bool writeSnapshot, ReadOnlyMemory<byte> script, Transaction? tx)
+        {
             FairySession testSession = GetOrCreateFairySession(session);
             FairyEngine newEngine;
+            BreakReason breakReason = BreakReason.None;
             logs.Clear();
             FairyEngine.Log += CacheLog!;
-            BreakReason breakReason = BreakReason.None;
             newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
             FairyEngine.Log -= CacheLog!;
             if (writeSnapshot)
@@ -171,7 +177,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(new JObject(), newEngine, breakReason);
         }
 
-        private FairyEngine DebugRun(byte[] script, DataCache snapshot, out BreakReason breakReason, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = FairyEngine.TestModeGas, IDiagnostic? diagnostic = null, FairyEngine oldEngine = null)
+        private FairyEngine DebugRun(ReadOnlyMemory<byte> script, DataCache snapshot, out BreakReason breakReason, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = FairyEngine.TestModeGas, IDiagnostic? diagnostic = null, FairyEngine oldEngine = null)
         {
             persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
             FairyEngine engine = FairyEngine.Create(TriggerType.Application, container, snapshot, this, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);

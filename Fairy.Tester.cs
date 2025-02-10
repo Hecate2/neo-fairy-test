@@ -81,8 +81,7 @@ namespace Neo.Plugins
         private JObject GetInvokeResultWithSession(string session, bool writeSnapshot, byte[] script, Signer[]? signers = null, Witness[]? witnesses = null)
         {
             FairySession testSession = GetOrCreateFairySession(session);
-            FairyEngine oldEngine = testSession.engine, newEngine;
-            logs.Clear();
+            FairyEngine oldEngine = testSession.engine;
             Random random = new();
             Transaction? tx = signers == null ? null : new Transaction
             {
@@ -93,8 +92,18 @@ namespace Neo.Plugins
                 Script = script,
                 Witnesses = witnesses
             };
+            JObject json = ExecuteFairyTransaction(session, writeSnapshot, script, tx);
+            return json;
+        }
+
+        protected JObject ExecuteFairyTransaction(string session, bool writeSnapshot, ReadOnlyMemory<byte> script, Transaction? tx)
+        {
+            FairySession testSession = GetOrCreateFairySession(session);
+            FairyEngine oldEngine = testSession.engine;
+            FairyEngine newEngine;
+            logs.Clear();
             FairyEngine.Log += CacheLog!;
-            newEngine = FairyEngine.Run(script, testSession.engine.Snapshot.CreateSnapshot(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
+            newEngine = FairyEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             FairyEngine.Log -= CacheLog!;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionStringToFairySession[session].engine = newEngine;
@@ -134,12 +143,15 @@ namespace Neo.Plugins
                     {
                         oracleRequests = (JArray)json["oraclerequests"]!;
                     }
-                    oracleRequests.Add(oracleRequest.ToStackItem(new ReferenceCounter()).ToJson());
+                    VM.Types.Array oracleRequestArray = (VM.Types.Array)oracleRequest.ToStackItem(new ReferenceCounter());
+                    oracleRequestArray.Add(requestId);
+                    JObject oracleRequestJson = oracleRequestArray.ToJson();
+                    oracleRequests.Add(oracleRequestJson);
                 }
             }
             if (notifications.Count > 0) json["notifications"] = notifications;
 
-            json["script"] = Convert.ToBase64String(script);
+            json["script"] = Convert.ToBase64String(script.ToArray());
             json["state"] = newEngine.State;
             json["gasconsumed"] = newEngine.GasConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
@@ -189,8 +201,8 @@ namespace Neo.Plugins
             //}
             if (newEngine.State != VMState.FAULT)
             {
-                if (witnesses == null)
-                    ProcessInvokeWithWalletAndSnapshot(oldEngine, script, json, signers, block: CreateDummyBlockWithTimestamp(testSession.engine.Snapshot, system.Settings, timestamp: testSession.timestamp));
+                if (tx?.Witnesses == null)
+                    ProcessInvokeWithWalletAndSnapshot(oldEngine, script, json, tx?.Signers, block: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: testSession.timestamp));
                 else
                 {
                     Wallet signatureWallet = oldEngine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : oldEngine.runtimeArgs.fairyWallet;
@@ -201,7 +213,7 @@ namespace Neo.Plugins
             return json;
         }
 
-        private void ProcessInvokeWithWalletAndSnapshot(FairyEngine engine, byte[] script, JObject result, Signer[]? signers = null, Block? block = null)
+        private void ProcessInvokeWithWalletAndSnapshot(FairyEngine engine, ReadOnlyMemory<byte> script, JObject result, Signer[]? signers = null, Block? block = null)
         {
             Wallet signatureWallet = engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : engine.runtimeArgs.fairyWallet;
             if (signatureWallet == null || signers == null) return;
