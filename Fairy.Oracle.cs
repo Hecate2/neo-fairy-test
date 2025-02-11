@@ -39,6 +39,25 @@ namespace Neo.Plugins
             return json;
         }
 
+        [FairyRpcMethod]
+        protected virtual JToken? OracleJsonPath(JArray _params)
+        {
+            string j = _params[0]!.AsString();
+            string jsonPath = _params[1]!.AsString();
+            byte[]? result = OracleJsonPath(j, jsonPath);
+            return result == null ? null : Convert.ToBase64String(result);
+        }
+
+        public static byte[]? OracleJsonPath(string input, string filterArgs)
+        {
+            if (string.IsNullOrEmpty(filterArgs))
+                return Utility.StrictUTF8.GetBytes(input);
+
+            JToken? beforeObject = JToken.Parse(input);
+            JArray? afterObjects = beforeObject?.JsonPath(filterArgs);
+            return afterObjects?.ToByteArray(false);
+        }
+
         public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
         {
             var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
@@ -52,9 +71,7 @@ namespace Neo.Plugins
             else
                 validUntilBlock = requestTx.BlockIndex + settings.MaxValidUntilBlockIncrement;
             while (useCurrentHeight && validUntilBlock <= height)
-            {
                 validUntilBlock += settings.MaxValidUntilBlockIncrement;
-            }
             var tx = new Transaction()
             {
                 Version = 0,
