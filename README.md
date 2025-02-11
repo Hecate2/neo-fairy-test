@@ -98,7 +98,9 @@ neo-modules have been archived and migrated into neo repository. Just build from
 
 #### Playing with oracles?
 
-[Do what is needed to trigger the oracle](https://github.com/Hecate2/neo-fairy-client/blob/master/test_oracle.py) (with a fairy session). If the oracle is activated, there will be info in `['result']['oraclerequests']` in the returned content of `invokeFuntionWithSession`. Then **pretend that you are the oracle contract** (Use signer == OracleContract `0xfe924b7cfe89ddd271abaf7210a80a7e11178758`. Fairy accepts any signer even without signature!), and call the callback method in your smart contract.
+[Do what is needed to trigger the oracle](https://github.com/Hecate2/neo-fairy-client/blob/master/test_oracle.py) (with a fairy session). If the oracle is activated, there will be info in `['result']['oraclerequests']` in the returned content of `invokeFuntionWithSession`. **Then call `OracleFinish` to perform a simulated oracle callback, with any oracle response you want, pretending that you are the oracle contract**. The methodology is to use signer == OracleContract `0xfe924b7cfe89ddd271abaf7210a80a7e11178758` (You do not have to do it by youself). Fairy accepts any signer even without signature! 
+
+And, for convenient json path simulation, `OracleJsonPath` method is provided.
 
 #### WebSocket features
 
