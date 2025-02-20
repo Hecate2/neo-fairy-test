@@ -142,13 +142,23 @@ namespace Neo.Plugins
             byte[] key = Convert.FromBase64String(keyBase64);
             string valueBase64 = _params[3]!.AsString();
             byte[] value = Convert.FromBase64String(valueBase64);
+            bool debug = _params.Count > 4 ? _params[4]!.AsBoolean() : false;
 
-            FairySession testSession = sessionStringToFairySession[session];
-            ContractState contractState = NativeContract.ContractManagement.GetContract(testSession.engine.Snapshot, contract);
+            FairyEngine? oldEngine;
+            FairySession testSession = GetOrCreateFairySession(session);
+            if (debug)
+            {
+                oldEngine = testSession.debugEngine;
+                if (oldEngine == null)
+                    throw new ArgumentException($"Null debugEngine. Did you start debugging from fairy session {session}?");
+            }
+            else
+                oldEngine = testSession.engine;
+            ContractState contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             StorageKey storageKey = new StorageKey { Id = contractState.Id, Key = key };
-            testSession.engine.Snapshot.Delete(storageKey);
+            oldEngine.Snapshot.Delete(storageKey);
             if (value.Length > 0)
-                testSession.engine.Snapshot.Add(new StorageKey { Id = contractState.Id, Key = key }, new StorageItem(value));
+                oldEngine.Snapshot.Add(new StorageKey { Id = contractState.Id, Key = key }, new StorageItem(value));
             JObject json = new();
             json[keyBase64] = valueBase64;
             return new JObject();
@@ -161,6 +171,7 @@ namespace Neo.Plugins
             UInt160 contract = UInt160.Parse(_params[1]!.AsString());
             string keyBase64 = _params[2]!.AsString();
             byte[] key = Convert.FromBase64String(keyBase64);
+            bool debug = _params.Count > 3 ? _params[3]!.AsBoolean() : false;
 
             ContractState contractState;
             JObject json = new();
@@ -175,7 +186,16 @@ namespace Neo.Plugins
                 return json;
             }
 
-            FairyEngine oldEngine = sessionStringToFairySession[session].engine;
+            FairyEngine? oldEngine;
+            FairySession testSession = GetOrCreateFairySession(session);
+            if (debug)
+            {
+                oldEngine = testSession.debugEngine;
+                if (oldEngine == null)
+                    throw new ArgumentException($"Null debugEngine. Did you start debugging from fairy session {session}?");
+            }
+            else
+                oldEngine = testSession.engine;
             contractState = NativeContract.ContractManagement.GetContract(oldEngine.Snapshot, contract);
             item = oldEngine.Snapshot.TryGet(new StorageKey { Id = contractState.Id, Key = key });
             json[keyBase64] = item == null ? null : Convert.ToBase64String(item.Value.ToArray());
@@ -189,15 +209,24 @@ namespace Neo.Plugins
             UInt160 contract = UInt160.Parse(_params[1]!.AsString());
             string keyBase64 = _params[2]!.AsString();
             byte[] prefix = Convert.FromBase64String(keyBase64);
+            bool debug = _params.Count > 3 ? _params[3]!.AsBoolean() : false;
 
             DataCache snapshot;
             if (session == null)
-            {   // use current actual blockchain state, instead of a fairy session
+                // use current actual blockchain state, instead of a fairy session
                 snapshot = system.StoreView;
-            }
             else
             {
-                FairyEngine oldEngine = sessionStringToFairySession[session].engine;
+                FairySession testSession = GetOrCreateFairySession(session);
+                FairyEngine? oldEngine;
+                if (debug)
+                {
+                    oldEngine = testSession.debugEngine;
+                    if (oldEngine == null)
+                        throw new ArgumentException($"Null debugEngine. Did you start debugging from fairy session {session}?");
+                }
+                else
+                    oldEngine = testSession.engine;
                 snapshot = oldEngine.Snapshot;
             }
             ContractState contractState = NativeContract.ContractManagement.GetContract(snapshot, contract);
