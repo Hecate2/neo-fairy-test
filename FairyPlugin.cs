@@ -41,29 +41,67 @@ namespace Neo.Plugins
             settings = new Settings(GetConfiguration());
         }
 
+        protected RpcServerSettings CreateDefaultFairyServerSettings(string ipAddress, uint? network = null)
+        {
+            network ??= system.Settings.Network!;
+            RpcServerSettings s = RpcServerSettings.Default with
+            {
+                Network = (uint)network,
+                BindAddress = System.Net.IPAddress.Parse(ipAddress),
+                Port = 16868,
+                SslCert = "",
+                SslCertPassword = "",
+                TrustedAuthorities = [],
+                RpcUser = "",
+                RpcPass = "",
+                MaxGasInvoke = 200,
+                MaxFee = 1_000_0000,
+                MaxConcurrentConnections = 40,
+                MaxIteratorResultItems = 100,
+                DisabledMethods = [],
+                SessionEnabled = true,
+                SessionExpirationTime = TimeSpan.FromSeconds(86400),
+            };
+            return s;
+        }
+
+        protected Fairy? TryStartFairyServer(RpcServerSettings s)
+        {
+            if (s.Network != system.Settings.Network)
+            {
+                ConsoleHelper.Warning($"Invalid server {nameof(Network)} from `{nameof(RpcServer)}.json` config. Expected {system.Settings.Network} from Neo.CLI, got {s.Network} from RpcServer.json");
+                return null;
+            }
+            Fairy fairy = new(system, s, this);
+            try
+            {
+                fairy.StartRpcServer();
+                fairy.StartWebsocketServer();
+            }
+            catch (Exception e)
+            {
+                ConsoleHelper.Warning($"Failed to start Fairy server {s.BindAddress}:{s.Port}. Check whether your IP address and port are available.");
+                ConsoleHelper.Error(e.ToString());
+                return null;
+            }
+            fairyServers.Add(fairy);
+            return fairy;
+        }
+
         protected override void OnSystemLoaded(NeoSystem system)
         {
             this.system = system;
             bool hasServer = false;
-            foreach (RpcServerSettings s in settings.Servers)
-            {
-                if (s.Network == system.Settings.Network)
-                {
-                    hasServer = true;
-                    Fairy fairy = new(system, s, this);
-                    fairy.StartRpcServer();
-                    fairy.StartWebsocketServer();
-                    fairyServers.Add(fairy);
-                }
-            }
+            if (settings != null)
+                foreach (RpcServerSettings s in settings.Servers)
+                    if (TryStartFairyServer(s) != null)
+                        hasServer = true;
             if (hasServer == false)
             {
-                ConsoleHelper.Warning("No valid server from config. Using default!");
-                RpcServerSettings s = RpcServerSettings.Default;
-                Fairy fairy = new(system, s, this);
-                fairy.StartRpcServer();
-                fairy.StartWebsocketServer();
-                fairyServers.Add(fairy);
+                string serverCount = settings is null ? "null" : settings.Servers.Count.ToString();
+                ConsoleHelper.Warning($"Got {serverCount} servers from config, with no valid server. Using default!");
+                foreach (RpcServerSettings s in new RpcServerSettings[] { CreateDefaultFairyServerSettings("0.0.0.0"), CreateDefaultFairyServerSettings("::") })
+                    TryStartFairyServer(s);
             }
 
             string pauseFileName = "pause.txt";
