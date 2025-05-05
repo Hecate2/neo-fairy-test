@@ -1,4 +1,16 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Oracle.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo.Cryptography.ECC;
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -24,7 +36,7 @@ namespace Neo.Plugins
 
             FairySession testSession = GetOrCreateFairySession(session);
             FairyEngine oldEngine = testSession.engine;
-            DataCache snapshot = oldEngine.Snapshot;
+            DataCache snapshot = oldEngine.SnapshotCache;
             OracleRequest request = NativeContract.Oracle.GetRequest(snapshot, oracleRequestId);
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             ECPoint[] oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
@@ -115,11 +127,12 @@ namespace Neo.Plugins
             // Calculate network fee
 
             var oracleContract = NativeContract.ContractManagement.GetContract(snapshot, NativeContract.Oracle.Hash);
-            var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CreateSnapshot(), settings: settings);
+            var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings);
             ContractMethodDescriptor md = oracleContract.Manifest.Abi.GetMethod("verify", -1);
             engine.LoadContract(oracleContract, md, CallFlags.None);
-            if (engine.Execute() != VMState.HALT) return null;
-            tx.NetworkFee += engine.GasConsumed;
+            //if (engine.Execute() != VMState.HALT) return null;
+            engine.Execute();
+            tx.NetworkFee += engine.FeeConsumed;
 
             var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
             var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
@@ -127,10 +140,10 @@ namespace Neo.Plugins
 
             // Base size for transaction: includes const_header + signers + script + hashes + witnesses, except attributes
 
-            int size_inv = 66 * m;
+            int sizeInv = 66 * m;
             int size = Transaction.HeaderSize + tx.Signers.GetVarSize() + tx.Script.GetVarSize()
-                + IO.Helper.GetVarSize(hashes.Length) + witnessDict[NativeContract.Oracle.Hash].Size
-                + IO.Helper.GetVarSize(size_inv) + size_inv + oracleSignContract.Script.GetVarSize();
+                + hashes.Length.GetVarSize() + witnessDict[NativeContract.Oracle.Hash].Size
+                + sizeInv.GetVarSize() + sizeInv + oracleSignContract.Script.GetVarSize();
 
             var feePerByte = NativeContract.Policy.GetFeePerByte(snapshot);
             if (response.Result.Length > OracleResponse.MaxResultSize)

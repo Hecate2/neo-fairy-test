@@ -1,4 +1,16 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// WebSocket.Subscribe.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo;
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
 using Neo.Ledger;
@@ -12,7 +24,7 @@ using System.Net.WebSockets;
 
 namespace Neo.Plugins
 {
-    public partial class Fairy : RpcServer
+    public partial class Fairy : RpcServer.RpcServer
     {
         protected uint subscriptionId = 0;
         protected SemaphoreSlim subscriptionIdSemaphore = new(1);
@@ -159,7 +171,7 @@ namespace Neo.Plugins
                     if (!wantedSender.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                     {
                         // little-endian; reverse the UInt160
-                        wantedSenderUInt160 = new UInt160(wantedSenderUInt160.ToArray().Reverse().ToArray());  // correct order
+                        wantedSenderUInt160 = new UInt160(wantedSenderUInt160.GetSpan().ToArray().Reverse().ToArray());  // correct order
                         // _params["sender"] = wantedSenderUInt160Reversed.ToString();  // big-endian
                     }
                     if (wantedSenderUInt160 != tx.Sender)
@@ -204,7 +216,7 @@ sendMessage:
                             if (!wantedContract.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                             {
                                 // little-endian; reverse the UInt160
-                                wantedContractUInt160 = new UInt160(wantedContractUInt160.ToArray().Reverse().ToArray());  // correct order
+                                wantedContractUInt160 = new UInt160(wantedContractUInt160.GetSpan().ToArray().Reverse().ToArray());  // correct order
                                 // _params["contract"] = wantedSenderUInt160Reversed.ToString();  // big-endian
                             }
                             if (wantedContractUInt160 != notification.ScriptHash)
@@ -251,7 +263,7 @@ sendMessage:
                         if (!wantedTxOrBlock.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
                         {
                             // little-endian; reverse the UInt256
-                            wantedTxOrBlockUInt256 = new UInt256(wantedTxOrBlockUInt256.ToArray().Reverse().ToArray());  // correct order
+                            wantedTxOrBlockUInt256 = new UInt256(wantedTxOrBlockUInt256.GetSpan().ToArray().Reverse().ToArray());  // correct order
                             // _params["contract"] = wantedSenderUInt160Reversed.ToString();  // big-endian
                         }
 

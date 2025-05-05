@@ -1,6 +1,18 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Engine.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.Plugins.RpcServer;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
@@ -29,7 +41,7 @@ namespace Neo.Plugins
         public class FairyEngine : ApplicationEngine
         {
             readonly Fairy fairy;
-            protected FairyEngine(TriggerType trigger, IVerifiable container, DataCache snapshot, Block persistingBlock, ProtocolSettings settings, long gas, IDiagnostic diagnostic, Fairy fairy, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
+            protected FairyEngine(TriggerType trigger, IVerifiable? container, DataCache snapshot, Block? persistingBlock, ProtocolSettings? settings, long gas, IDiagnostic? diagnostic, Fairy fairy, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
                 : base(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, jumpTable: ComposeFairyJumpTable())
             {
                 this.fairy = fairy;
@@ -37,23 +49,23 @@ namespace Neo.Plugins
                 {
                     if (copyRuntimeArgs)
                     {
-                        this.services = oldEngine.services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);  // clone
-                        this.runtimeArgs = (RuntimeArgs)oldEngine.runtimeArgs.Clone();
+                        services = oldEngine.services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);  // clone
+                        runtimeArgs = (RuntimeArgs)oldEngine.runtimeArgs.Clone();
                     }
                     else
                     {
-                        this.services = oldEngine.services;
-                        this.runtimeArgs = oldEngine.runtimeArgs;
+                        services = oldEngine.services;
+                        runtimeArgs = oldEngine.runtimeArgs;
                     }
                 }
                 else
                 {
-                    this.services = ApplicationEngine.Services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);
-                    this.runtimeArgs = new RuntimeArgs(fairy.defaultFairyWallet);
+                    services = ApplicationEngine.Services.ToDictionary(kvpair => kvpair.Key, kvpair => kvpair.Value);
+                    runtimeArgs = new RuntimeArgs(fairy.defaultFairyWallet);
                 }
             }
 
-            public static FairyEngine Create(TriggerType trigger, IVerifiable container, DataCache snapshot, Fairy fairy, Block persistingBlock = null, ProtocolSettings settings = null, long gas = TestModeGas, IDiagnostic diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
+            public static FairyEngine Create(TriggerType trigger, IVerifiable? container, DataCache snapshot, Fairy fairy, Block? persistingBlock = null, ProtocolSettings? settings = null, long gas = TestModeGas, IDiagnostic? diagnostic = null, FairyEngine? oldEngine = null, bool copyRuntimeArgs = false)
             {
                 return new FairyEngine(trigger, container, snapshot, persistingBlock, settings, gas, diagnostic, fairy, oldEngine: oldEngine, copyRuntimeArgs: copyRuntimeArgs);
             }
@@ -81,8 +93,8 @@ namespace Neo.Plugins
                     State = VMState.NONE;
                 while (State != VMState.HALT && State != VMState.FAULT)
                 {
-                    uint currentInstructionPointer = (uint)this.CurrentContext!.InstructionPointer;
-                    UInt160 currentScripthash = this.CurrentScriptHash;
+                    uint currentInstructionPointer = (uint)CurrentContext!.InstructionPointer;
+                    UInt160 currentScripthash = CurrentScriptHash;
                     ExecuteNext();
                     if (currentScripthash != null && fairy.contractScriptHashToInstructionPointerToCoverage.ContainsKey(currentScripthash) && fairy.contractScriptHashToInstructionPointerToCoverage[currentScripthash].ContainsKey(currentInstructionPointer))
                         fairy.contractScriptHashToInstructionPointerToCoverage[currentScripthash][currentInstructionPointer] = true;
@@ -149,8 +161,8 @@ namespace Neo.Plugins
                     FixedPrice = fixedPrice,
                     RequiredCallFlags = requiredCallFlags
                 };
-                this.services ??= new Dictionary<uint, InteropDescriptor>();
-                this.services[hash] = descriptor;
+                services ??= new Dictionary<uint, InteropDescriptor>();
+                services[hash] = descriptor;
                 return descriptor;
             }
 
@@ -163,8 +175,8 @@ namespace Neo.Plugins
                 ulong result = base.GetTime();
                 if (result != 0)
                     return result;
-                uint currentIndex = NativeContract.Ledger.CurrentIndex(Snapshot);
-                Block currentBlock = NativeContract.Ledger.GetBlock(Snapshot, currentIndex);
+                uint currentIndex = NativeContract.Ledger.CurrentIndex(SnapshotCache);
+                Block currentBlock = NativeContract.Ledger.GetBlock(SnapshotCache, currentIndex);
                 return currentBlock.Timestamp + ProtocolSettings.MillisecondsPerBlock;
             }
             public ulong GetFairyTime() => runtimeArgs.timestamp != null ? (ulong)runtimeArgs.timestamp : GetTime();
@@ -395,12 +407,12 @@ namespace Neo.Plugins
                 sessionStringToFairySession.Remove(id, out _);
 
             JArray debugInfoToBeDeleted = new();
-            foreach (UInt160 k in this.contractScriptHashToSourceLineFilenames.Keys)
+            foreach (UInt160 k in contractScriptHashToSourceLineFilenames.Keys)
             {
                 string? contractName = null;
-                foreach (string s in this.sessionStringToFairySession.Keys)
+                foreach (string s in sessionStringToFairySession.Keys)
                 {
-                    contractName = NativeContract.ContractManagement.GetContract(this.sessionStringToFairySession[s].engine.Snapshot, k)?.Manifest.Name;
+                    contractName = NativeContract.ContractManagement.GetContract(sessionStringToFairySession[s].engine.SnapshotCache, k)?.Manifest.Name;
                     if (contractName != null)
                         break;
                 }

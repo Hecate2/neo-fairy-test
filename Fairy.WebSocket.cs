@@ -1,3 +1,14 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.WebSocket.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -6,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Neo.ConsoleService;
 using Neo.Json;
+using Neo.Plugins.RpcServer;
 using System.Net.Security;
 using System.Net.WebSockets;
 using System.Reflection;
@@ -13,9 +25,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Neo.Plugins
 {
-    public partial class Fairy : RpcServer
+    public partial class Fairy : RpcServer.RpcServer
     {
-        public IWebHost websocketHost;
+        public IWebHost? websocketHost;
         protected readonly Dictionary<string, Func<JArray, object>> FairyRpcMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, object>> webSocketNeoGoCompatibleMethods = new();
         protected readonly Dictionary<string, Func<WebSocket, JArray, CancellationToken, object>> webSocketMethods = new();
@@ -24,19 +36,19 @@ namespace Neo.Plugins
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class WebsocketNeoGoCompatibleMethodAttribute : Attribute
         {
-            public string Name { get; set; }
+            public string? Name { get; set; }
         }
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class WebsocketMethodAttribute : Attribute
         {
-            public string Name { get; set; }
+            public string? Name { get; set; }
         }
 
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class WebsocketControlMethodAttribute : Attribute
         {
-            public string Name { get; set; }
+            public string? Name { get; set; }
         }
 
         public void RegisterWebsocketMethods(object handler)
@@ -164,7 +176,7 @@ namespace Neo.Plugins
                 {
                     JObject response = new();
                     response["jsonrpc"] = "2.0";
-                    response["id"] = (string)context.Request.Query["id"];
+                    response["id"] = (string)context.Request.Query["id"]!;
                     switch (wsFuncNeoGoCompatible(webSocket, (JArray)@params))
                     {
                         case uint subscriptionId:
@@ -194,7 +206,7 @@ namespace Neo.Plugins
                             {
                                 JObject response = new();
                                 response["jsonrpc"] = "2.0";
-                                response["id"] = (string)context.Request.Query["id"];
+                                response["id"] = (string)context.Request.Query["id"]!;
                                 response["result"] = method;
                                 await webSocket.SendAsync(response.ToByteArray(false), WebSocketMessageType.Text, true, CancellationToken.None);
                             }
@@ -224,7 +236,7 @@ namespace Neo.Plugins
                     {
                         JObject response = new();
                         response["jsonrpc"] = "2.0";
-                        response["id"] = (string)context.Request.Query["id"];
+                        response["id"] = (string)context.Request.Query["id"]!;
                         response["result"] = rpcResult switch
                         {
                             JToken result => result,

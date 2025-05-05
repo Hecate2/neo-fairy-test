@@ -1,8 +1,20 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// FairyPlugin.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.Plugins.RpcServer;
 using Neo.SmartContract.Native;
 
 namespace Neo.Plugins
@@ -26,8 +38,8 @@ namespace Neo.Plugins
         public readonly TimeSpan SleepTimeMs = TimeSpan.FromMilliseconds(3600_000);
         public CancellationTokenSource? CancelSyncSleep;
 
-        Settings settings;
-        NeoSystem system;
+        Settings? settings;
+        NeoSystem? system;
         readonly List<Fairy> fairyServers = new();
 
         public FairyPlugin() : base()
@@ -43,7 +55,7 @@ namespace Neo.Plugins
 
         protected RpcServerSettings CreateDefaultFairyServerSettings(string ipAddress, uint? network = null)
         {
-            network ??= system.Settings.Network!;
+            network ??= system!.Settings.Network!;
             RpcServerSettings s = RpcServerSettings.Default with
             {
                 Network = (uint)network,
@@ -67,7 +79,7 @@ namespace Neo.Plugins
 
         protected Fairy? TryStartFairyServer(RpcServerSettings s)
         {
-            if (s.Network != system.Settings.Network)
+            if (s.Network != system!.Settings.Network)
             {
                 ConsoleHelper.Warning($"Invalid server {nameof(Network)} from `{nameof(RpcServer)}.json` config. Expected {system.Settings.Network} from Neo.CLI, got {s.Network} from RpcServer.json");
                 return null;
@@ -172,7 +184,7 @@ namespace Neo.Plugins
                         string? testSession = null;
                         foreach (string s in fairy.sessionStringToFairySession.Keys)
                         {
-                            contractName = NativeContract.ContractManagement.GetContract(fairy.sessionStringToFairySession[s].engine.Snapshot, k)?.Manifest.Name;
+                            contractName = NativeContract.ContractManagement.GetContract(fairy.sessionStringToFairySession[s].engine.SnapshotCache, k)?.Manifest.Name;
                             if (contractName != null)
                             {
                                 testSession = s;

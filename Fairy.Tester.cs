@@ -1,3 +1,15 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Tester.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -86,7 +98,7 @@ namespace Neo.Plugins
             Transaction? tx = signers == null ? null : new Transaction
             {
                 Nonce = (uint)random.Next(),
-                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(testSession.engine.Snapshot) + system.Settings.MaxValidUntilBlockIncrement,
+                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(testSession.engine.SnapshotCache) + system.Settings.MaxValidUntilBlockIncrement,
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Script = script,
@@ -103,7 +115,7 @@ namespace Neo.Plugins
             FairyEngine newEngine;
             logs.Clear();
             FairyEngine.Log += CacheLog!;
-            newEngine = FairyEngine.Run(script, oldEngine.Snapshot.CreateSnapshot(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
+            newEngine = FairyEngine.Run(script, oldEngine.SnapshotCache.CloneCache(), this, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: oldEngine);
             FairyEngine.Log -= CacheLog!;
             if (writeSnapshot && newEngine.State == VMState.HALT)
                 sessionStringToFairySession[session].engine = newEngine;
@@ -117,15 +129,15 @@ namespace Neo.Plugins
                 JObject notificationJson = new();
                 notificationJson["tx"] = notification.ScriptContainer.Hash.ToString();
                 notificationJson["scripthash"] = notification.ScriptHash.ToString();
-                notificationJson["contractname"] = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, notification.ScriptHash)?.Manifest.Name;
+                notificationJson["contractname"] = NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, notification.ScriptHash)?.Manifest.Name;
                 notificationJson["eventname"] = notification.EventName;
                 notificationJson["eventargs"] = notification.State.ToJson();
                 notifications.Add(notificationJson);
                 if (newEngine.Notifications[i].EventName == "OracleRequest")
                 {
                     int oracleContractId = NativeContract.Oracle.Id;
-                    ulong requestId = (ulong)(new BigInteger(newEngine.Snapshot.TryGet(new StorageKey { Id = oracleContractId, Key = new byte[] { 9 } }).Value.ToArray()) - 1);
-                    OracleRequest oracleRequest = newEngine.Snapshot.TryGet(new KeyBuilder(oracleContractId, 7).AddBigEndian(requestId)).GetInteroperable<OracleRequest>();
+                    ulong requestId = (ulong)(new BigInteger(newEngine.SnapshotCache.TryGet(new StorageKey { Id = oracleContractId, Key = new byte[] { 9 } })!.Value.ToArray()) - 1);
+                    OracleRequest oracleRequest = newEngine.SnapshotCache.TryGet(new KeyBuilder(oracleContractId, 7).AddBigEndian(requestId))!.GetInteroperable<OracleRequest>();
                     //if (!Uri.TryCreate(oracleRequest.Url, UriKind.Absolute, out var uri))
                     //    break;
                     //if (uri.Scheme != "https")
@@ -153,19 +165,19 @@ namespace Neo.Plugins
 
             json["script"] = Convert.ToBase64String(script.ToArray());
             json["state"] = newEngine.State;
-            json["gasconsumed"] = newEngine.GasConsumed.ToString();
+            json["gasconsumed"] = newEngine.FeeConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
             {
                 StringBuilder traceback = new();
-                try { if (newEngine.CallingScriptHash != null) traceback.Append($"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"); } catch { }
-                try { traceback.Append($"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"); } catch { }
+                try { if (newEngine.CallingScriptHash != null) traceback.Append($"CallingScriptHash={newEngine.CallingScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, newEngine.CallingScriptHash)?.Manifest.Name}]\r\n"); } catch { }
+                try { traceback.Append($"CurrentScriptHash={newEngine.CurrentScriptHash}[{NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, newEngine.CurrentScriptHash)?.Manifest.Name}]\r\n"); } catch { }
                 try { traceback.Append($"EntryScriptHash={newEngine.EntryScriptHash}\r\n"); } catch { }
                 traceback.Append(newEngine.FaultException.StackTrace);
                 foreach (Neo.VM.ExecutionContext context in newEngine.InvocationStack.Reverse())
                 {
                     UInt160 contextScriptHash = context.GetScriptHash();
-                    string? contextContractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, contextScriptHash)?.Manifest.Name;
+                    string? contextContractName = NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, contextScriptHash)?.Manifest.Name;
                     //try
                     {
                         if (contractScriptHashToAllInstructionPointerToSourceLineNum.ContainsKey(contextScriptHash) && contractScriptHashToAllInstructionPointerToSourceLineNum[contextScriptHash].ContainsKey((uint)context.InstructionPointer))
@@ -186,7 +198,7 @@ namespace Neo.Plugins
 
                 foreach (LogEventArgs log in logs)
                 {
-                    string? contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash)?.Manifest.Name;
+                    string? contractName = NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, log.ScriptHash)?.Manifest.Name;
                     traceback.Append($"\r\n[{log.ScriptHash}] {contractName}: {log.Message}");
                 }
                 json["traceback"] = traceback.ToString();
@@ -202,12 +214,12 @@ namespace Neo.Plugins
             if (newEngine.State != VMState.FAULT)
             {
                 if (tx?.Witnesses == null)
-                    ProcessInvokeWithWalletAndSnapshot(oldEngine, script, json, tx?.Signers, block: CreateDummyBlockWithTimestamp(oldEngine.Snapshot, system.Settings, timestamp: testSession.timestamp));
+                    ProcessInvokeWithWalletAndSnapshot(oldEngine, script, json, tx?.Signers, block: CreateDummyBlockWithTimestamp(oldEngine.SnapshotCache, system.Settings, timestamp: testSession.timestamp));
                 else
                 {
                     Wallet signatureWallet = oldEngine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : oldEngine.runtimeArgs.fairyWallet;
                     json["tx"] = Convert.ToBase64String(tx.ToArray());
-                    json["networkfee"] = tx.CalculateNetworkFee(oldEngine.Snapshot, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script).ToString();
+                    json["networkfee"] = tx.CalculateNetworkFee(oldEngine.SnapshotCache, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script).ToString();
                 }
             }
             return json;
@@ -225,14 +237,14 @@ namespace Neo.Plugins
             Transaction tx;
             try
             {
-                tx = signatureWallet.MakeTransaction(engine.Snapshot.CreateSnapshot(), script, sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
+                tx = signatureWallet.MakeTransaction(engine.SnapshotCache.CloneCache(), script, sender, witnessSigners, maxGas: settings.MaxGasInvoke, persistingBlock: block);
             }
             catch //(Exception e)
             {
                 // result["exception"] = GetExceptionMessage(e);
                 return;
             }
-            DataCache snapshotForSignature = engine.Snapshot.CreateSnapshot();
+            DataCache snapshotForSignature = engine.SnapshotCache.CloneCache();
             ContractParametersContext context = new(snapshotForSignature, tx, system.Settings.Network);
             signatureWallet.Sign(context);
             try

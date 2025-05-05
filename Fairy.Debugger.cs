@@ -1,3 +1,15 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Debugger.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -55,7 +67,7 @@ namespace Neo.Plugins
             BreakReason breakReason = BreakReason.None;
             logs.Clear();
             FairyEngine.Log += CacheLog!;
-            newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
+            newEngine = DebugRun(script, testSession.engine.SnapshotCache.CloneCache(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
             FairyEngine.Log -= CacheLog!;
             if (writeSnapshot)
                 sessionStringToFairySession[session].debugEngine = newEngine;
@@ -81,7 +93,7 @@ namespace Neo.Plugins
             logs.Clear();
             FairyEngine.Log += CacheLog!;
             BreakReason breakReason = BreakReason.None;
-            newEngine = DebugRun(script, testSession.engine.Snapshot.CreateSnapshot(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
+            newEngine = DebugRun(script, testSession.engine.SnapshotCache.CloneCache(), out breakReason, container: tx, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: testSession.engine);
             FairyEngine.Log -= CacheLog!;
             if (writeSnapshot)
                 sessionStringToFairySession[session].debugEngine = newEngine;
@@ -125,10 +137,10 @@ namespace Neo.Plugins
             json["state"] = newEngine.State;
             json["breakreason"] = breakReason;
             json["scripthash"] = newEngine.CurrentScriptHash?.ToString();
-            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.Snapshot, newEngine.CurrentScriptHash)?.Manifest.Name : null;
+            json["contractname"] = newEngine.CurrentScriptHash != null ? NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, newEngine.CurrentScriptHash)?.Manifest.Name : null;
             json["instructionpointer"] = newEngine.CurrentContext?.InstructionPointer;
             GetSourceCode(json, newEngine.CurrentScriptHash, (uint?)newEngine.CurrentContext?.InstructionPointer);
-            json["gasconsumed"] = newEngine.GasConsumed.ToString();
+            json["gasconsumed"] = newEngine.FeeConsumed.ToString();
             json["exception"] = GetExceptionMessage(newEngine.FaultException);
             if (json["exception"] != null)
             {
@@ -156,7 +168,7 @@ namespace Neo.Plugins
 
                 foreach (LogEventArgs log in logs)
                 {
-                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.Snapshot, log.ScriptHash).Manifest.Name;
+                    string contractName = NativeContract.ContractManagement.GetContract(newEngine.SnapshotCache, log.ScriptHash).Manifest.Name;
                     traceback.Append($"\r\n[{log.ScriptHash}] {contractName}: {log.Message}");
                 }
                 json["traceback"] = traceback.ToString();
@@ -177,7 +189,7 @@ namespace Neo.Plugins
             return DumpDebugResultJson(new JObject(), newEngine, breakReason);
         }
 
-        private FairyEngine DebugRun(ReadOnlyMemory<byte> script, DataCache snapshot, out BreakReason breakReason, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = FairyEngine.TestModeGas, IDiagnostic? diagnostic = null, FairyEngine oldEngine = null)
+        private FairyEngine DebugRun(ReadOnlyMemory<byte> script, DataCache snapshot, out BreakReason breakReason, IVerifiable? container = null, Block? persistingBlock = null, ProtocolSettings? settings = null, int offset = 0, long gas = FairyEngine.TestModeGas, IDiagnostic? diagnostic = null, FairyEngine? oldEngine = null)
         {
             persistingBlock ??= CreateDummyBlockWithTimestamp(snapshot, settings ?? ProtocolSettings.Default, timestamp: null);
             FairyEngine engine = FairyEngine.Create(TriggerType.Application, container, snapshot, this, persistingBlock, settings, gas, diagnostic, oldEngine: oldEngine);

@@ -1,4 +1,16 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Wallet.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo.Cryptography;
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P;
@@ -60,8 +72,10 @@ namespace Neo.Plugins
                         return acc;
                 if (key == null)
                     throw new NotImplementedException("privateKey==null not supported for now");
-                FairyAccount account = new FairyAccount(this, contract.ScriptHash, key);
-                account.Contract = contract;
+                FairyAccount account = new FairyAccount(this, contract.ScriptHash, key)
+                {
+                    Contract = contract
+                };
                 accounts.Add(account);
                 return account;
             }
@@ -189,22 +203,22 @@ namespace Neo.Plugins
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
             byte[] message = Convert.FromBase64String(_params[1]!.AsString());
             NamedCurveHash namedCurveHash = _params.Count > 2 ? _params[2]!.AsEnum<NamedCurveHash>() : NamedCurveHash.secp256r1SHA256;
-            (Cryptography.ECC.ECCurve curve, Hasher hasher) = namedCurveHash switch
+            (Cryptography.ECC.ECCurve curve, HashAlgorithm HashAlgorithm) = namedCurveHash switch
             {
                 NamedCurveHash.secp256k1SHA256 =>
-                    (Cryptography.ECC.ECCurve.Secp256k1, Hasher.SHA256),
+                    (Cryptography.ECC.ECCurve.Secp256k1, HashAlgorithm.SHA256),
                 NamedCurveHash.secp256r1SHA256 =>
-                    (Cryptography.ECC.ECCurve.Secp256r1, Hasher.SHA256),
+                    (Cryptography.ECC.ECCurve.Secp256r1, HashAlgorithm.SHA256),
                 NamedCurveHash.secp256k1Keccak256 =>
-                    (Cryptography.ECC.ECCurve.Secp256k1, Hasher.Keccak256),
+                    (Cryptography.ECC.ECCurve.Secp256k1, HashAlgorithm.Keccak256),
                 NamedCurveHash.secp256r1Keccak256 =>
-                    (Cryptography.ECC.ECCurve.Secp256r1, Hasher.Keccak256),
+                    (Cryptography.ECC.ECCurve.Secp256r1, HashAlgorithm.Keccak256),
                 _ => throw new NotImplementedException($"Invalid namedCurveHash {namedCurveHash}"),
             };
             JObject json = new();
             KeyPair keyPair = signatureWallet.GetAccounts().First().GetKey();
             json["signed"] = Convert.ToBase64String(
-                Crypto.Sign(message, keyPair.PrivateKey, curve, hasher)
+                Crypto.Sign(message, keyPair.PrivateKey, curve, HashAlgorithm)
             );
             return json;
         }
@@ -216,7 +230,7 @@ namespace Neo.Plugins
 
             FairySession fairySession = GetOrCreateFairySession(session);
             Wallet signatureWallet = fairySession.engine.runtimeArgs.fairyWallet == null ? defaultFairyWallet : fairySession.engine.runtimeArgs.fairyWallet;
-            DataCache snapshotForSignature = fairySession.engine.Snapshot.CreateSnapshot();
+            DataCache snapshotForSignature = fairySession.engine.SnapshotCache.CloneCache();
 
             byte[] script = Convert.FromBase64String(_params[1]!.AsString());
             Signer[]? signers = _params.Count >= 3 ? SignersFromJson((JArray)_params[2]!, system.Settings) : null;
@@ -236,8 +250,8 @@ namespace Neo.Plugins
                 ValidUntilBlock = validUntilBlock,
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
+                SystemFee = systemFee
             };
-            tx.SystemFee = systemFee;
             tx.NetworkFee = networkFee ?? tx.CalculateNetworkFee(snapshotForSignature, system.Settings, (a) => signatureWallet.GetAccount(a)?.Contract?.Script);
 
             ContractParametersContext context = new(snapshotForSignature, tx, system.Settings.Network);

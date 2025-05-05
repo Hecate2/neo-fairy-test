@@ -1,3 +1,14 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.Tester.Snapshot.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo.Json;
 using System.Collections.Concurrent;
 
@@ -20,7 +31,7 @@ namespace Neo.Plugins
 
         private FairyEngine BuildSnapshotWithDummyScript(FairyEngine? engine = null)
         {
-            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.Snapshot.CreateSnapshot() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);
+            return FairyEngine.Run(new byte[] { 0x40 }, engine != null ? engine.SnapshotCache.CloneCache() : system.StoreView, this, settings: system.Settings, gas: settings.MaxGasInvoke, oldEngine: engine, copyRuntimeArgs: true);
         }
 
         [FairyRpcMethod]

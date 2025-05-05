@@ -1,7 +1,20 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// Fairy.WebSocket.Subscribe.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
+using Neo.Extensions;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.Plugins.RpcServer;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
@@ -10,7 +23,7 @@ using System.Net.WebSockets;
 
 namespace Neo.Plugins
 {
-    public partial class Fairy : RpcServer
+    public partial class Fairy : RpcServer.RpcServer
     {
         protected Block? committingBlock;
         protected ConcurrentDictionary<NotifyEventArgs, UInt256> notifications = new();
@@ -56,8 +69,7 @@ namespace Neo.Plugins
             else if (o is WebSocketSubscriptionNeoGoCompatible)
             {
                 WebSocketSubscriptionNeoGoCompatible webSocketSubscriptionNeoGoCompatible = (WebSocketSubscriptionNeoGoCompatible)o;
-                JArray subscriptionId = new JArray();
-                subscriptionId.Add(webSocketSubscriptionNeoGoCompatible.subscriptionId.ToString("x"));
+                JArray subscriptionId = [webSocketSubscriptionNeoGoCompatible.subscriptionId.ToString("x")];
                 Unsubscribe(webSocket, subscriptionId);
                 return webSocketSubscriptionNeoGoCompatible.ToJson();
             }
@@ -73,7 +85,8 @@ namespace Neo.Plugins
             LinkedListNode<object>? node = webSocketSubscriptions.Last;
             while (node != null)
             {
-                if (node is LinkedListNode<WebSocketSubscription> && ((WebSocketSubscription)node.Value).method == method)
+                WebSocketSubscription? subscription = node.Value as WebSocketSubscription?;
+                if (subscription.HasValue && subscription.Value.method == method)
                 {
                     webSocketSubscriptions.Remove(node);
                     WebSocketSubscription value = (WebSocketSubscription)node.Value;
